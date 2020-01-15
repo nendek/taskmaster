@@ -2,7 +2,9 @@ import sys
 import os
 import yaml
 import argparse
+import signal
 from program import Program
+from process import Process
 
 
 
@@ -23,9 +25,29 @@ def parse_config_file(conf_file):
                     raise NameError("NO_CMD")
             for elem in data["programs"]:
                 procs.append(Program(data["programs"][elem], elem))
+
             for proc in procs:
                 print(proc)
                 print('\n')
+
+            print("creation d'un process:")
+            ex = Process()
+            print(ex)
+            print()
+            print("start d'un process:")
+            ex.start()
+            print(ex)
+            print()
+            print("restart d'un process:")
+            ex.restart(signal.SIGKILL)
+            print(ex)
+            print()
+            print("stop d'un process:")
+            ex.stop(signal.SIGKILL)
+            print(ex)
+            print()
+
+
         except yaml.YAMLError as e:
             print("YAML file format error:")
             print(e)
