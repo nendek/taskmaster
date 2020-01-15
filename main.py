@@ -3,6 +3,7 @@ import os
 import yaml
 import argparse
 import signal
+import time
 from program import Program
 from process import Process
 
@@ -16,7 +17,7 @@ def parse_cmd(l):
 def parse_config_file(conf_file):
     with open(conf_file) as f:
         try:
-            procs = []
+            progs = []
             data = yaml.safe_load(f)
             if not "programs" in data.keys():
                 raise NameError("NO_PROG")
@@ -24,29 +25,7 @@ def parse_config_file(conf_file):
                 if not "cmd" in data["programs"][elem]:
                     raise NameError("NO_CMD")
             for elem in data["programs"]:
-                procs.append(Program(data["programs"][elem], elem))
-
-            for proc in procs:
-                print(proc)
-                print('\n')
-
-            print("creation d'un process:")
-            ex = Process()
-            print(ex)
-            print()
-            print("start d'un process:")
-            ex.start()
-            print(ex)
-            print()
-            print("restart d'un process:")
-            ex.restart(signal.SIGKILL)
-            print(ex)
-            print()
-            print("stop d'un process:")
-            ex.stop(signal.SIGKILL)
-            print(ex)
-            print()
-
+                progs.append(Program(data["programs"][elem], elem))
 
         except yaml.YAMLError as e:
             print("YAML file format error:")
@@ -56,8 +35,37 @@ def parse_config_file(conf_file):
                 print("No cmd in config file")
             elif e.__str__() == "NO_PROG":
                 print("No programs in config file")
-        #except Exception as e:
-        #    print(e)
+
+        process = progs[1].process[0]
+        print(process)
+        time.sleep(3)
+        process.update_child_status()
+        print(process)
+
+
+#            process.start()
+#            for proc in procs:
+#                print(proc)
+#                print('\n')
+
+#            print("creation d'un process:")
+#            ex = Process()
+#            print(ex)
+#            print()
+#            print("start d'un process:")
+#            ex.start()
+#            print(ex)
+#            print()
+#            print("restart d'un process:")
+#            ex.restart(signal.SIGKILL)
+#            print(ex)
+#            print()
+#            print("stop d'un process:")
+#            ex.stop(signal.SIGKILL)
+#            print(ex)
+#            print()
+
+
 
 def main(conf_file):
     parse_config_file(conf_file)

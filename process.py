@@ -1,64 +1,66 @@
 from datetime import datetime
+import time
 import os
+import sys
 
 class Process:
     def __init__(self):
         self.pid = 0
-        self.state = "stop"
-        self.start_date = 0
-        self.fd_w = 0
-        self.fd_r = 0
+        self.status = "NOT STARTED"
+        self.start_date = None
+        self.start_time = 0
+        self.end_date = None
+        self.return_code = None
 
     def __str__(self):
-        return "Process\npid: {}\nstate: {}\nstart_date: {}\n"\
-                "fd_w: {}\nfd_r: {}".format(self.pid, self.state, self.start_date, self.fd_w, self.fd_r)
+        return "Process\n\tpid: {}\n\tstatus: {}\n\tstart_date: {}\n"\
+        "\tend_date: {}\n\treturn_code: {}".format(self.pid, self.status, self.start_date, self.end_date, self.return_code)
 
-    def start(self):
-        try:
-            self.fd_r, self.fd_w = os.pipe()
-            pid = os.fork()
-        except:
-            return -1
-
+    def start(self, cmd, args, env, stdout, stderr):
         self.start_date = datetime.now()
-        if pid == 0:
-            os.close(self.fd_r)
-            w = os.fdopen(self.fd_w, 'w')
-            w.write("start")
-            w.close()
-            while True:
-                i = 0
-                i += 1
-            #ret = os.execve(cmd, argv, env)
-            #if ret == -1: #voir try execpt
-            #    w = os.fdopen(self.fd_w, 'w')
-            #    w.write('error')
-            #    w.close()
-            #    sys.exit(-1)
-            #w = os.fdopen(self.fd_w, 'w')
-            #w.write('stop')
-            #w.close()
-            sys.exit(0)
+        self.start_time = time.time()
+        pid = os.fork()
+        if pid == 0: # child
+            self._launch_process(cmd, args, env, stdout, stderr)
         else:
             self.pid = pid
             self.update_child_status()
-        return 0
+            return 
+
+    def _launch_process(self, cmd, args, env, fdout, fderr):
+        process_env = os.environ.copy()
+        if fdout != False:
+            os.dup2(fdout, sys.stdout.fileno())
+        if fderr != False:
+            os.dup2(fderr, sys.stderr.fileno())
+
+        for key, value in env.items():
+            process_env[key] = value 
+        args.insert(0, cmd)
+        os.execve(cmd, args, process_env)
+        sys.exit()
+        
 
     def update_child_status(self):
-        if self.fd_w <= 0 and self.fd_r <= 0:
-            self.status = "error"
-            return -1
-        os.close(self.fd_w)
-        r = os.fdopen(self.fd_r)
-        status = r.read()
-        r.close()
-        self.state = status
+        self.end_date = None
+        self.status = self._get_child_status()
         return 0
 
-    def stop(self, signal):
+    def _get_child_status(self):
+        status = os.waitpid(self.pid, os.WNOHANG)
+        if status[0] == 0:
+            return "RUNNING"
+        else:
+            self.return_code = os.WEXITSTATUS(status[1])
+            self.end_date = datetime.now()
+            self.pid = None
+            return "FINISHED"
+
+
+    def send_signal(self, signal):
         try:
             os.kill(self.pid, signal)
-            self.state = "kill"
+            self.status = "KILLED"
         except Exception as e:
             print(e)
             return -1
