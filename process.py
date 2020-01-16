@@ -16,30 +16,33 @@ class Process:
         return "Process\n\tpid: {}\n\tstatus: {}\n\tstart_date: {}\n"\
         "\tend_date: {}\n\treturn_code: {}".format(self.pid, self.status, self.start_date, self.end_date, self.return_code)
 
-    def start(self, cmd, args, env, stdout, stderr):
+    def start(self, data):
         self.start_date = datetime.now()
         self.start_time = time.time()
         pid = os.fork()
         if pid == 0: # child
-            self._launch_process(cmd, args, env, stdout, stderr)
+            self._launch_process(data)
         else:
             self.pid = pid
             self.update_child_status()
             return 
 
-    def _launch_process(self, cmd, args, env, fdout, fderr):
-        process_env = os.environ.copy()
-        if fdout != False:
-            os.dup2(fdout, sys.stdout.fileno())
-        if fderr != False:
-            os.dup2(fderr, sys.stderr.fileno())
-
-        for key, value in env.items():
-            process_env[key] = value 
-        args.insert(0, cmd)
-        os.execve(cmd, args, process_env)
+    def _launch_process(self, data):
+        if data["fdout"] > 0:
+            os.dup2(data["fdout"], sys.stdout.fileno())
+        if data["fderr"] > 0:
+            os.dup2(data["fderr"], sys.stderr.fileno())
+        if data["working_dir"] != '.':
+            try:
+                os.chdir(data["working_dir"])
+            except OSError as e:
+                print("cant chdir: {}".format(e))
+        try:
+            os.umask(int(data["umask"], 8))
+        except OSError as e:
+            print("cant umask: {}".format(e))
+        os.execve(data["cmd"], data["args"], data["env"])
         sys.exit()
-        
 
     def update_child_status(self):
         self.end_date = None
@@ -55,7 +58,6 @@ class Process:
             self.end_date = datetime.now()
             self.pid = None
             return "FINISHED"
-
 
     def send_signal(self, signal):
         try:

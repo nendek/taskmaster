@@ -5,11 +5,13 @@ class Program:
     def __init__(self, config, name):
         self.name = name
         self.process = []
+        self.data = {}
+        self.env = os.environ.copy()
         self._load_config(config)
         for i in range(0, self.numprocs):
             self.process.append(Process())
             if self.autostart == True:
-                self.process[i].start(self.bin, self.args, self.env, self.fdout, self.fderr)
+                self.process[i].start(self.data)
 
     def _load_config(self, config):
         self.cmd = config["cmd"]
@@ -36,7 +38,7 @@ class Program:
         if "autorestart" in config.keys():
             self.autorestart = config["autorestart"]
         else:
-            self.autorestart = -1 #unexepected
+            self.autorestart = "unexepected"
 
         if "startretries" in config.keys():
             self.startretries = config["startretries"]
@@ -87,11 +89,12 @@ class Program:
             self.exitcodes = [0]
 
         if "env" in config.keys():
-            self.env = config["env"].copy()
+            self.var_env = config["env"].copy()
         else:
-            self.env = {}
+            self.var_env = {}
 
         self.bin, self.args = self.parse_cmd()
+        self._update_data()
         
 
     def __str__(self):
@@ -103,4 +106,25 @@ class Program:
     def parse_cmd(self):
         tab = self.cmd.split()
         return tab.pop(0), tab
-        
+    
+    def _set_env(self):
+        for key, value in self.var_env.items():
+            self.data["env"][key] = value
+        return
+
+    def _set_args(self):
+        self.data["args"].insert(0, self.bin)
+        return
+
+    def _update_data(self):
+        self.env = os.environ.copy()
+        self.data["cmd"] = self.bin
+        self.data["args"] = self.args
+        self._set_args()
+        self.data["env"] = self.env
+        self._set_env()
+        self.data["fdout"] = self.fdout
+        self.data["fderr"] = self.fderr
+        self.data["working_dir"] = self.working_dir
+        self.data["umask"] = self.umask
+        return

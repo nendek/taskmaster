@@ -36,7 +36,8 @@ def parse_config_file(conf_file):
             elif e.__str__() == "NO_PROG":
                 print("No programs in config file")
 
-        process = progs[1].process[0]
+        process = progs[0].process[0]
+        print(progs[0])
         print(process)
         time.sleep(3)
         process.update_child_status()
