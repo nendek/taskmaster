@@ -127,4 +127,7 @@ class Program:
         self.data["fderr"] = self.fderr
         self.data["working_dir"] = self.working_dir
         self.data["umask"] = self.umask
+        self.data["starttime"] = self.starttime
+        self.data["stoptime"] = self.stoptime
+        self.data["startretries"] = self.startretries
         return
