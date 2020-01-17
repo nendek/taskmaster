@@ -4,13 +4,16 @@ import signal
 
 class Program:
     def __init__(self, config, name):
-        self.name = name
+        self.name_prog = name
         self.process = []
         self.data = {}
         self.env = os.environ.copy()
         self._load_config(config)
         for i in range(0, self.numprocs):
-            self.process.append(Process())
+            if self.numprocs <= 1:
+                self.process.append(Process(self.name_prog))
+            else:
+                self.process.append(Process("{}:{}".format(self.name_prog, i)))
             if self.autostart == True:
                 self.process[i].start(self.data)
 
@@ -155,9 +158,9 @@ class Program:
             process.kill()
         return
     
-    def kill(self, pid):
+    def kill(self, name):
         for process in self.process:
-            if pid == process.pid:
+            if name == process.name_proc:
                 process.kill()
                 return 1
         return 0
@@ -167,9 +170,33 @@ class Program:
             process.stop(self.stopsignal)
         return
 
-    def stop(self, pid):
+    def stop(self, name):
         for process in self.process:
-            if pid == process.pid:
+            if name == process.name_proc:
                 process.stop(self.stopsignal)
+                return 1
+        return 0
+    
+    def start_all(self):
+        for process in self.process:
+            process.start(self.data)
+        return
+
+    def start(self, name):
+        for process in self.process:
+            if name == process.name_proc:
+                process.start(self.data)
+                return 1
+        return 0
+    
+    def restart_all(self):
+        for process in self.process:
+            process.restart(self.data)
+        return
+
+    def restart(self, name):
+        for process in self.process:
+            if name == process.name_proc:
+                process.restart(self.data)
                 return 1
         return 0

@@ -6,7 +6,8 @@ import threading
 import sys
 
 class Process:
-    def __init__(self):
+    def __init__(self, name):
+        self.name_proc = name
         self.pid = 0
         self.status = "STOPPED"
         self.start_date = None
@@ -118,6 +119,6 @@ class Process:
         else:
             return 0
 
-    def restart(self, signal):
-        self.stop(signal)
-        self.start()
+    def restart(self, data):
+        self.kill()
+        self.start(data)

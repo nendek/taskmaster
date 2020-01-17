@@ -51,26 +51,53 @@ class Orchestrator():
     def show_processes(self):
         self.update_processes()
         for program in self.programs:
-            print("nom du programme: {}".format(program.name))
             for process in program.process:
+                print("nom du programme: {}".format(process.name_proc))
                 print(process)
             print("")
 
-    def stop_all(self):
+    def start_proc(self, name):
         for program in self.programs:
-            program.stop_all()
+            if program.start(name):
+                return
+        print("name error")
+        return
+    
+    def start_all_proc(self):
+        for program in self.programs:
+            program.start_all()
+        return
 
-
-    def kill_all(self):
+    def kill_all_proc(self):
         for program in self.programs:
             program.kill_all()
 
-    def stop(self, pid):
+    def kill_proc(self, name):
         for program in self.programs:
-            if program.stop(pid):
+            if program.kill(name):
                 return
+        print("name error")
+        return
+    
+    def stop_all_proc(self):
+        for program in self.programs:
+            program.stop_all()
 
-    def kill(self, pid):
+    def stop_proc(self, name):
         for program in self.programs:
-            if program.kill(pid):
+            if program.stop(name):
                 return
+        print("name error")
+        return
+    
+    def restart_proc(self, name):
+        for program in self.programs:
+            if program.restart(name):
+                return
+        print("name error")
+        return
+    
+    def restart_all_proc(self):
+        for program in self.programs:
+            program.restart_all()
+        return
