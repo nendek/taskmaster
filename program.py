@@ -9,6 +9,15 @@ class Program:
         self.data = {}
         self.env = os.environ.copy()
         self._load_config(config)
+        self._launch_process()
+
+    def __del__(self):
+        for process in self.process:
+            del process
+        print("all {} processes deleted".format(self.name_prog))
+
+    def _launch_process(self):
+        self.process = []
         for i in range(0, self.numprocs):
             if self.numprocs <= 1:
                 self.process.append(Process(self.name_prog))
@@ -16,11 +25,6 @@ class Program:
                 self.process.append(Process("{}:{}".format(self.name_prog, i)))
             if self.autostart == True:
                 self.process[i].start(self.data)
-
-    def __del__(self):
-        for process in self.process:
-            del process
-        print("all {} processes deleted".format(self.name_prog))
 
     def _load_config(self, config):
         self.cmd = config["cmd"]
@@ -140,3 +144,11 @@ class Program:
                 process.restart(self.data)
                 return 1
         return 0
+
+    def refresh_conf(self, config):
+        self._load_config(config)
+
+    def reload(self, config):
+        self._load_config(config)
+        del self.process
+        self._launch_process()

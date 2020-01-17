@@ -8,15 +8,13 @@ class Orchestrator():
     def __init__(self, config_file_name):
         self.path = os.path.join(os.path.abspath(os.path.dirname(config_file_name)), config_file_name)
         self.configs = {}
+        self.configs = self._get_configs()
         self.programs = self.start()
-        signal.signal(signal.SIGHUP, self.reload_conf)
+        signal.signal(signal.SIGHUP, self._reload_conf)
 
     def start(self):
-        data = self.get_config_file()
-        self.configs = {"programs": {}}
         progs = []
-        for elem in data["programs"]:
-            self.configs["programs"][elem] = self.clean_config(data["programs"][elem])
+        for elem in self.configs["programs"]:
             progs.append(Program(self.configs["programs"][elem], elem))
         return progs
 
@@ -46,7 +44,14 @@ class Orchestrator():
                 print(process)
             print("")
 
-    def get_config_file(self):
+    def _get_configs(self):
+        configs = {"programs": {}}
+        data = self._get_config_file()
+        for elem in data["programs"]:
+            configs["programs"][elem] = self._clean_config(data["programs"][elem])
+        return configs
+
+    def _get_config_file(self):
         with open(self.path) as f:
             try:
                 data = yaml.safe_load(f)
@@ -60,15 +65,14 @@ class Orchestrator():
                 print(e)
             except NameError as e:
                 if e.__str__() == "NO_CMD":
-                    print("No cmd in config file")
+                    priGnt("No cmd in config file")
                 elif e.__str__() == "NO_PROG":
                     print("No programs in config file")
                 else:
                     raise e
         return data
-        
 
-    def clean_config(self, data):
+    def _clean_config(self, data):
         config = {}
         config["cmd"] = data["cmd"]
         if "numprocs" in data.keys():
@@ -159,19 +163,43 @@ class Orchestrator():
             config["var_env"] = {}
 
         return config
+    
+    def _refresh_conf_prog(self, name, configs):
+        for prog in self.programs:
+            if prog.name_prog == name:
+                prog.refresh_conf(configs)
+                return
+        return
+        
+    def _reload_prog(self, name, configs):
+        for prog in self.programs:
+            if prog.name_prog == name:
+                prog.reload(configs)
+                return
+        return
 
-    def reload_conf(self, signum, stack):
-        pass
-#        data = self.get_config_file()
-#        progs = []
-#        for program in self.programs:
-#            if program.name_prog not in data["programs"]:
-#                del program
-#            elif self._same_configs(program.config, data["programs"][program.name_prog]) == False:
-#                progs.append(Program(data["programs"][program.name_prog], program.name_prog, start=False))
-#                del program
-
-
+    def _reload_conf(self, signum, stack):
+        new_configs = self._get_configs()
+        for prog in self.programs:
+            if prog.name_prog not in new_configs["programs"]:
+                del prog
+        for prog in self.configs["programs"]:
+            if self.configs["programs"][prog]["numprocs"] !=  new_configs["programs"][prog]["numprocs"]:
+                self._reload_prog(elem, new_configs["programs"][prog])
+            elif self.configs["programs"][prog]["umask"] !=  new_configs["programs"][prog]["umask"]:
+                self._reload_prog(elem, new_configs["programs"][prog])
+            elif self.configs["programs"][prog]["working_dir"] !=  new_configs["programs"][prog]["working_dir"]:
+                self._reload_prog(elem, new_configs["programs"][prog])
+            elif self.configs["programs"][prog]["stdout"] !=  new_configs["programs"][prog]["stdout"]:
+                self._reload_prog(elem, new_configs["programs"][prog])
+            elif self.configs["programs"][prog]["stderr"] !=  new_configs["programs"][prog]["stderr"]:
+                self._reload_prog(elem, new_configs["programs"][prog])
+            elif self.configs["programs"][prog]["var_env"] !=  new_configs["programs"][prog]["var_env"]:
+                self._reload_prog(elem, new_configs["programs"][prog])
+            else:
+                self._refresh_conf_prog(prog, new_configs["programs"][prog])
+        self.configs = new_configs
+        return
 
     def _same_configs(self, dic1, dic2):
         return True
