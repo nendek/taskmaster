@@ -1,13 +1,17 @@
 import yaml
 import time
+import signal
+import os
 from program import Program
 
 class Orchestrator():
     def __init__(self, config_file_name):
-        self.programs = self.start(config_file_name)
+        self.path = os.path.join(os.path.abspath(os.path.dirname(config_file_name)), config_file_name)
+        self.programs = self.start()
+        signal.signal(signal.SIGHUP, self.reload_conf)
 
-    def start(self, filename):
-        with open(filename) as f:
+    def start(self):
+        with open(self.path) as f:
             try:
                 progs = []
                 data = yaml.safe_load(f)
@@ -55,6 +59,9 @@ class Orchestrator():
                 print("nom du programme: {}".format(process.name_proc))
                 print(process)
             print("")
+
+    def reload_conf(self, signum, stack):
+        return
 
     def start_proc(self, name):
         for program in self.programs:
