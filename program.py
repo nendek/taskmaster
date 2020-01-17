@@ -1,5 +1,6 @@
 from process import Process
 import os
+import signal
 
 class Program:
     def __init__(self, config, name):
@@ -51,9 +52,26 @@ class Program:
             self.starttime = 1
 
         if "stopsignal" in config.keys():
-            self.stopsignal = config["stopsignal"]
+            sig_conf = config["stopsignal"]
+            if sig_conf == signal.SIGTERM.name:
+                self.stopsignal = signal.SIGTERM
+            elif sig_conf == signal.SIGINT.name:
+                self.stopsignal = signal.SIGINT
+            elif sig_conf == signal.SIGQUIT.name:
+                self.stopsignal = signal.SIGQUIT
+            elif sig_conf == signal.SIGHUP.name:
+                self.stopsignal = signal.SIGHUP
+            elif sig_conf == signal.SIGKILL.name:
+                self.stopsignal = signal.SIGKILL
+            elif sig_conf == signal.SIGUSR1.name:
+                self.stopsignal = signal.SIGUSR1
+            elif sig_conf == signal.SIGUSR2.name:
+                self.stopsignal = signal.SIGUSR2
+            else:
+                #log pas le bon signal de stop
+                self.stopsignal = signal.SIGTERM
         else:
-            self.stopsignal = "TERM"
+            self.stopsignal = signal.SIGTERM
 
         if "stoptime" in config.keys():
             self.stoptime = config["stoptime"]
@@ -131,3 +149,27 @@ class Program:
         self.data["stoptime"] = self.stoptime
         self.data["startretries"] = self.startretries
         return
+    
+    def kill_all(self):
+        for process in self.process:
+            process.kill()
+        return
+    
+    def kill(self, pid):
+        for process in self.process:
+            if pid == process.pid:
+                process.kill()
+                return 1
+        return 0
+
+    def stop_all(self):
+        for process in self.process:
+            process.stop(self.stopsignal)
+        return
+
+    def stop(self, pid):
+        for process in self.process:
+            if pid == process.pid:
+                process.stop(self.stopsignal)
+                return 1
+        return 0

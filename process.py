@@ -101,11 +101,17 @@ class Process:
             print("cant umask: {}".format(e))
         os.execve(data["cmd"], data["args"], data["env"])
         sys.exit()
+    
+    def kill(self):
+        _send_signal(signal.SIGKILL)
 
-    def send_signal(self, signal): # put nb_start to 0
+    def stop(self, stopsignal):
+        _send_signal(stopsignal)
+
+    def _send_signal(self, signal): # put nb_start to 0
         try:
             os.kill(self.pid, signal)
-            self.status = "KILLED"
+            self.status = "STOPPED"
         except Exception as e:
             print(e)
             return -1

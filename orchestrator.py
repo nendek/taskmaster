@@ -39,14 +39,15 @@ class Orchestrator():
             for process in program.process:
                 process.update_status()
                 if process.status == "BACKOFF":
-                    process.start()
+                    process.start(program.data)
                 if program.autorestart == True:
                     if process.status in ["STOPPED", "EXITED"]:
-                        process.start()
+                        process.start(program.data)
                 if program.autorestart == "unexpeced":
                     if process.status == "EXITED":
                         if process.return_code not in program.exitcodes:
-                            process.start()
+                            process.start(program.data)
+
     def show_processes(self):
         self.update_processes()
         for program in self.programs:
@@ -54,3 +55,22 @@ class Orchestrator():
             for process in program.process:
                 print(process)
             print("")
+
+    def stop_all(self):
+        for program in self.programs:
+            program.stop_all()
+
+
+    def kill_all(self):
+        for program in self.programs:
+            program.kill_all()
+
+    def stop(self, pid):
+        for program in self.programs:
+            if program.stop(pid):
+                return
+
+    def kill(self, pid):
+        for program in self.programs:
+            if program.kill(pid):
+                return
