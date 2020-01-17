@@ -2,8 +2,8 @@ from datetime import datetime
 import time
 import os
 import threading
-#import Rlock
 import sys
+import signal
 
 class Process:
     def __init__(self, name):
@@ -24,6 +24,10 @@ class Process:
         self.end_time = None
         self.return_code = None
 
+    def __del__(self):
+        self.kill()
+        print("process {} killed".format(self.name_proc))
+    
     def __str__(self):
         return "Process\n\tpid: {}\n\tstatus: {}\n\tstart_date: {}\n"\
         "\tend_date: {}\n\treturn_code: {}".format(self.pid, self.status, self.start_date, self.end_date, self.return_code)
@@ -104,10 +108,10 @@ class Process:
         sys.exit()
     
     def kill(self):
-        _send_signal(signal.SIGKILL)
+        self._send_signal(signal.SIGKILL)
 
     def stop(self, stopsignal):
-        _send_signal(stopsignal)
+        self._send_signal(stopsignal)
 
     def _send_signal(self, signal): # put nb_start to 0
         try:

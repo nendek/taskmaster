@@ -17,71 +17,24 @@ class Program:
             if self.autostart == True:
                 self.process[i].start(self.data)
 
+    def __del__(self):
+        for process in self.process:
+            del process
+        print("all {} processes deleted".format(self.name_prog))
+
     def _load_config(self, config):
         self.cmd = config["cmd"]
-        if "numprocs" in config.keys():
-            self.numprocs = config["numprocs"]
-        else:
-            self.numprocs = 1
+        self.numprocs = config["numprocs"]
+        self.umask = config["umask"]
+        self.working_dir = config["working_dir"]
+        self.autostart = config["autostart"]
+        self.autorestart = config["autorestart"]
+        self.startretries = config["startretries"]
+        self.starttime = config["starttime"]
+        self.stopsignal = config["stopsignal"]
+        self.stoptime = config["stoptime"]
 
-        if "umask" in config.keys():
-            self.umask = config["umask"]
-        else:
-            self.umask = "022"
-
-        if "working_dir" in config.keys():
-            self.working_dir = config["working_dir"]
-        else:
-            self.working_dir = "."
-
-        if "autostart" in config.keys():
-            self.autostart = config["autostart"]
-        else:
-            self.autostart = True
-
-        if "autorestart" in config.keys():
-            self.autorestart = config["autorestart"]
-        else:
-            self.autorestart = "unexepected"
-
-        if "startretries" in config.keys():
-            self.startretries = config["startretries"]
-        else:
-            self.startretries = 3
-
-        if "starttime" in config.keys():
-            self.starttime = config["starttime"]
-        else:
-            self.starttime = 1
-
-        if "stopsignal" in config.keys():
-            sig_conf = config["stopsignal"]
-            if sig_conf == signal.SIGTERM.name:
-                self.stopsignal = signal.SIGTERM
-            elif sig_conf == signal.SIGINT.name:
-                self.stopsignal = signal.SIGINT
-            elif sig_conf == signal.SIGQUIT.name:
-                self.stopsignal = signal.SIGQUIT
-            elif sig_conf == signal.SIGHUP.name:
-                self.stopsignal = signal.SIGHUP
-            elif sig_conf == signal.SIGKILL.name:
-                self.stopsignal = signal.SIGKILL
-            elif sig_conf == signal.SIGUSR1.name:
-                self.stopsignal = signal.SIGUSR1
-            elif sig_conf == signal.SIGUSR2.name:
-                self.stopsignal = signal.SIGUSR2
-            else:
-                #log pas le bon signal de stop
-                self.stopsignal = signal.SIGTERM
-        else:
-            self.stopsignal = signal.SIGTERM
-
-        if "stoptime" in config.keys():
-            self.stoptime = config["stoptime"]
-        else:
-            self.stoptime = 10
-
-        if "stdout" in config.keys():
+        if config["stdout"] != False:
             self.stdout = config["stdout"]
             self.fdout = os.open(self.stdout, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
             if self.fdout < 0:
@@ -90,7 +43,7 @@ class Program:
             self.stdout = False
             self.fdout = -1
 
-        if "stderr" in config.keys():
+        if config["stderr"] != False:
             self.stderr = config["stderr"]
             self.fderr = os.open(self.stderr, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
             if self.fderr < 0:
@@ -98,21 +51,8 @@ class Program:
         else:
             self.stderr = False
             self.fderr = -1
-
-        if "exitcodes" in config.keys():
-            self.exitcodes = []
-            if type(config["exitcodes"]) == int:
-                self.exitcodes.append(config["exitcodes"])
-            else:
-                for elem in config["exitcodes"]:
-                    self.exitcodes.append(elem)
-        else:
-            self.exitcodes = [0]
-
-        if "env" in config.keys():
-            self.var_env = config["env"].copy()
-        else:
-            self.var_env = {}
+        self.exitcodes = config["exitcodes"]
+        self.var_env = config["var_env"].copy()
 
         self.bin, self.args = self.parse_cmd()
         self._update_data()

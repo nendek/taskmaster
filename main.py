@@ -48,10 +48,11 @@ def parse_cmd(l):
 def main(conf_file):
     claudio_abbado = Orchestrator(conf_file)
     claudio_abbado.show_processes()
-    for i in range(0, 6):
-        time.sleep(0.4)
-        print("\n\n\n")
-        claudio_abbado.show_processes()
+#    claudio_abbado.reload_conf(1, 1)
+#    for i in range(0, 6):
+#        time.sleep(0.4)
+#        print("\n\n\n")
+#        claudio_abbado.show_processes()
 
 
 if __name__ == "__main__":
