@@ -73,7 +73,7 @@ class Process:
                     self.nb_start = 0
             if self.status == "STOPPING":
                 if now > self.stop_time + self.stopping_time:
-                    pass # add self.kill
+                    self.kill()
         else: # process fini
             if self.status == "STARTING":
                 if self.end_time < self.start_time + self.starting_time:
