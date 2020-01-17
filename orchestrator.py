@@ -41,7 +41,7 @@ class Orchestrator():
                 if process.status == "BACKOFF":
                     process.start(program.data)
                 if program.autorestart == True:
-                    if process.status in ["STOPPED", "EXITED"]:
+                    if process.status == "EXITED":
                         process.start(program.data)
                 if program.autorestart == "unexpeced":
                     if process.status == "EXITED":
