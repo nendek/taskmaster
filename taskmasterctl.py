@@ -1,19 +1,6 @@
+import readline
 import socket
 import sys
-
-host = 'localhost'
-port = 5678
-
-def create_connection():
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((host, port))
-    except Exception as e:
-        print("Error: {}".format(e))
-        sys.exit(0)
-    return sock
-
-stream_serv = create_connection()
 
 error_name_missing = "Error: {0} requires a process name\n\
 {0} <name>\t\t{0} a process\n\
@@ -21,85 +8,98 @@ error_name_missing = "Error: {0} requires a process name\n\
 {0} <name> <name>\t{0} multiple processes or groups\n\
 {0} all\t\t{0} all processes"
 
-def null(cmd, args):
-    print("{} not implemented yet".format(cmd))
+class Taskmasterclt():
+    def __init__(self):
+#        self.error_name_missing = "Error: {0} requires a process name\n\
+#        {0} <name>\t\t{0} a process\n\
+#        {0} <gname>:*  \t{0} all process in a group\n\
+#        {0} <name> <name>\t{0} multiple processes or groups\n\
+#        {0} all\t\t{0} all processes"
+        self.dic_command = {
+        "status" : self.one_arg,
+        "start" : self.multiple_arg,
+        "stop" : self.multiple_arg,
+        "restart" : self.multiple_arg,
+        "update" : self.one_arg,
+        "reload" : self.null, # restart the supervisord
+        "pid" : self.one_arg, # get the pid of supervisord
+        "quit" : self.quit,
+        "shutdown" : self.one_arg,
+        "help" : self.print_help
+        }
+        self.host = 'localhost'
+        self.port = 5678
+        self.stream_serv = None
+        self.create_connection()
+        self.one_arg("status", "")
 
-def status(cmd, args):
-    print("status fct")
-
-def start(cmd, args):
-    if len(args) < 1:
-        print(error_name_missing.format(cmd))
+    def create_connection(self):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((self.host, self.port))
+        except Exception as e:
+            print("Error: {}".format(e))
+            sys.exit(0)
+        self.stream_serv = sock
         return
-    for elem in args:
-        if elem == "all":
-            send_and_recv_cmd(cmd, "all")
+
+    def send_and_recv_cmd(self, cmd, arg):
+        msg = "{} {}".format(cmd, arg)
+        msg = msg.encode()
+        self.stream_serv.send(msg)
+        msg = self.stream_serv.recv(1024)
+        if msg == b'':
+            print("taskamasterd not running")
+            self.stream_serv.close()
             return
-    for elem in args:
-        send_and_recv_cmd(cmd, elem)
+        print(msg.decode())
+    
+    def one_arg(self, cmd, args):
+        self.send_and_recv_cmd(cmd, "")
 
-def stop(cmd, args):
-    if len(args) < 1:
-        print(error_name_missing.format(cmd))
-        return
-    for elem in args:
-        if elem == "all":
-            send_and_recv_cmd(cmd, "all")
+    def multiple_arg(self, cmd, args):
+        if len(args) < 1:
+            print(error_name_missing.format(cmd))
             return
-    for elem in args:
-        send_and_recv_cmd(cmd, elem)
+        for elem in args:
+            if elem == "all":
+                self.send_and_recv_cmd(cmd, "all")
+                return
+        for elem in args:
+            self.send_and_recv_cmd(cmd, elem)
 
-def restart(cmd, args):
-    if len(args) < 1:
-        print(error_name_missing.format(cmd))
-        return
-    for elem in args:
-        if elem == "all":
-            send_and_recv_cmd(cmd, "all")
-            return
-    for elem in args:
-        send_and_recv_cmd(cmd, elem)
+    def null(self, cmd, args):
+        print("{} not implemented yet".format(cmd))
+    
+    def quit(self, cmd, args):
+        sys.exit(0)
+    
+    def print_help(cmd, args):
+        print("help fct")
 
-def print_help(cmd, args):
-    print("help fct")
+    def handle_cmd(self, cmd):
+        args = cmd.split()
+        if len(args) == 0:
+            return 
+        if args[0] not in self.dic_command:
+            print("*** Unknown syntax: {}".format(args[0]))
+            return 
+        else:
+            self.dic_command[args[0]](args.pop(0), args)
 
-dic_command = {
-"status" : status,
-"start" : start,
-"stop" : stop,
-"restart" : restart,
-"update" : null,
-"reload" : null, # restart the supervisord
-"pid" : null, # get the pid of supervisord
-"quit" : null,
-"shutdown" : null,
-"help" : print_help
-}
+cmds = ["status", "start", "stop", "restart", "update", "reload", "pid", "quit", "shutdown", "help"]
 
-def handle_cmd(cmd):
-    args = cmd.split()
-    if len(args) == 0:
-        return 
-    if args[0] not in dic_command:
-        print("*** Unknown syntax: {}".format(args[0]))
-        return 
-    else:
-        dic_command[args[0]](args.pop(0), args)
-
-def send_and_recv_cmd(cmd, arg):
-    msg = "{} {}".format(cmd, arg)
-    msg = msg.encode()
-    stream_serv.send(msg)
-    msg = stream_serv.recv(1024)
-    if msg == b'':
-        print("taskamasterd not running")
-        socket.close()
-        return
-    print(msg.decode())
-
-
-status(None, None)
+def completion(text, state):
+    matches = [s for s in cmds if s and s.startswith(text)]
+    try:
+        return matches[state] + ' '
+    except IndexError:
+        return None
+        
+ctl = Taskmasterclt()
+readline.set_completer(completion)
+readline.parse_and_bind('tab: complete')
 
 while True:
     cmd = input("taskmaster> ")
-    handle_cmd(cmd)
+    ctl.handle_cmd(cmd)

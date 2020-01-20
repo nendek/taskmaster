@@ -52,7 +52,7 @@ class Orchestrator():
                     string += "{}\t\t{}\tpid{}, uptime{}\n".format(proc.name_proc, proc.status, proc.pid, (time.time() - proc.start_time))
                 else:
                     string += "{}\t\t{}\t{}\n".format(proc.name_proc, proc.status, proc.end_date)
-            return string
+        return string
 
     def _get_configs(self):
         configs = {"programs": {}}
@@ -130,15 +130,16 @@ class Orchestrator():
                 if "stdout" in data["programs"][elem]:
                     if type(data["programs"][elem]["stdout"]) != str:
                         raise NameError("BAD_STDOUT")
-                    if not os.path.exists(data["programs"][elem]["working_dir"]) or not\
-                            os.path.isfile(data["programs"][elem]["working_dir"]) or os.path.isdir(data["programs"][elem]["working_dir"]):
+                    if not os.path.exists(data["programs"][elem]["stdout"]) or not\
+                            os.path.isfile(data["programs"][elem]["stdout"]) or os.path.isdir(data["programs"][elem]["stdout"]):
                         raise NameError("BAD_STDOUT")
+
                 #stderr
                 if "stderr" in data["programs"][elem]:
                     if type(data["programs"][elem]["stderr"]) != str:
                         raise NameError("BAD_STDERR")
-                    if not os.path.exists(data["programs"][elem]["working_dir"]) or not\
-                            os.path.isfile(data["programs"][elem]["working_dir"]) or os.path.isdir(data["programs"][elem]["working_dir"]):
+                    if not os.path.exists(data["programs"][elem]["stderr"]) or not\
+                            os.path.isfile(data["programs"][elem]["stderr"]) or os.path.isdir(data["programs"][elem]["stderr"]):
                         raise NameError("BAD_STDERR")
                 #exitcodes
                 if "exitcodes" in data["programs"][elem]:
@@ -200,7 +201,7 @@ class Orchestrator():
         if "working_dir" in data.keys():
             config["working_dir"] = data["working_dir"]
         else:
-            config["working_dir"] = "."
+            config["working_dir"] = os.getcwd()
 
         if "autostart" in data.keys():
             config["autostart"] = data["autostart"]
