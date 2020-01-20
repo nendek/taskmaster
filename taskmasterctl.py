@@ -16,22 +16,22 @@ class Taskmasterclt():
 #        {0} <name> <name>\t{0} multiple processes or groups\n\
 #        {0} all\t\t{0} all processes"
         self.dic_command = {
-        "status" : self.status,
-        "start" : self.start,
-        "stop" : self.stop,
-        "restart" : self.restart,
-        "update" : self.null,
+        "status" : self.one_arg,
+        "start" : self.multiple_arg,
+        "stop" : self.multiple_arg,
+        "restart" : self.multiple_arg,
+        "update" : self.one_arg,
         "reload" : self.null, # restart the supervisord
-        "pid" : self.null, # get the pid of supervisord
-        "quit" : self.null,
-        "shutdown" : self.null,
+        "pid" : self.one_arg, # get the pid of supervisord
+        "quit" : self.quit,
+        "shutdown" : self.one_arg,
         "help" : self.print_help
         }
         self.host = 'localhost'
         self.port = 5678
         self.stream_serv = None
         self.create_connection()
-        self.status(None, None)
+        self.one_arg("status", "")
 
     def create_connection(self):
         try:
@@ -54,32 +54,10 @@ class Taskmasterclt():
             return
         print(msg.decode())
     
-    def status(self, cmd, args):
-        print("status fct")
+    def one_arg(self, cmd, args):
+        self.send_and_recv_cmd(cmd, "")
 
-    def start(self, cmd, args):
-        if len(args) < 1:
-            print(error_name_missing.format(cmd))
-            return
-        for elem in args:
-            if elem == "all":
-                self.send_and_recv_cmd(cmd, "all")
-                return
-        for elem in args:
-            self.send_and_recv_cmd(cmd, elem)
-    
-    def stop(self, md, args):
-        if len(args) < 1:
-            print(error_name_missing.format(cmd))
-            return
-        for elem in args:
-            if elem == "all":
-                self.send_and_recv_cmd(cmd, "all")
-                return
-        for elem in args:
-            self.send_and_recv_cmd(cmd, elem)
-    
-    def restart(self, cmd, args):
+    def multiple_arg(self, cmd, args):
         if len(args) < 1:
             print(error_name_missing.format(cmd))
             return
@@ -92,7 +70,10 @@ class Taskmasterclt():
 
     def null(self, cmd, args):
         print("{} not implemented yet".format(cmd))
-
+    
+    def quit(self, cmd, args):
+        sys.exit(0)
+    
     def print_help(cmd, args):
         print("help fct")
 
@@ -110,7 +91,6 @@ cmds = ["status", "start", "stop", "restart", "update", "reload", "pid", "quit",
 
 def completion(text, state):
     matches = [s for s in cmds if s and s.startswith(text)]
-#    print(matches, state)
     try:
         return matches[state] + ' '
     except IndexError:

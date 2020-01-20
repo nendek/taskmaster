@@ -34,7 +34,7 @@ class Supervisord:
         while msg != b'quit':
             msg = self.stream_client.recv(1024)
             print(msg)
-            stream_client.send(b'nude')
+            self.stream_client.send(b'nude')
         self.stream_client.close()
         self.socket.close()
 
