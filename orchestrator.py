@@ -2,6 +2,7 @@ import yaml
 import time
 import signal
 import os
+import sys
 from program import Program
 
 class Orchestrator():
@@ -31,7 +32,7 @@ class Orchestrator():
                 if program.autorestart == True:
                     if process.status == "EXITED":
                         process.start(program.data)
-                if program.autorestart == "unexpeced":
+                if program.autorestart == "unexpected":
                     if process.status == "EXITED":
                         if process.return_code not in program.exitcodes:
                             process.start(program.data)
@@ -55,22 +56,124 @@ class Orchestrator():
         with open(self.path) as f:
             try:
                 data = yaml.safe_load(f)
-                if not "programs" in data.keys():
-                    raise NameError("NO_PROG")
-                for elem in data["programs"]:
-                    if not "cmd" in data["programs"][elem]:
-                        raise NameError("NO_CMD")
+                self._parsing_yaml(data)
             except yaml.YAMLError as e:
                 print("YAML file format error:")
                 print(e)
-            except NameError as e:
-                if e.__str__() == "NO_CMD":
-                    priGnt("No cmd in config file")
-                elif e.__str__() == "NO_PROG":
-                    print("No programs in config file")
-                else:
-                    raise e
         return data
+    
+    def _parsing_yaml(self, data):
+        try:
+            if not "programs" in data.keys():
+                raise NameError("NO_PROG")
+            for elem in data["programs"]:
+                #cmd
+                if not "cmd" in data["programs"][elem]:
+                    raise NameError("NO_CMD")
+                elif type(data["programs"][elem]["cmd"]) != str:
+                    raise NameError("BAD_CMD")
+                #numprocs
+                if "numprocs" in data["programs"][elem]:
+                    if type(data["programs"][elem]["numprocs"]) != int:
+                        raise NameError("BAD_NP")
+                #umask
+                if "umask" in data["programs"][elem]:
+                    if type(data["programs"][elem]["umask"]) != int:
+                        raise NameError("BAD_UM")
+                #working_dir
+                if "working_dir" in data["programs"][elem]:
+                    if type(data["programs"][elem]["working_dir"]) != str:
+                        raise NameError("BAD_WD")
+                    if not os.path.exists(data["programs"][elem]["working_dir"]) or not\
+                            os.path.isdir(data["programs"][elem]["working_dir"]):
+                                raise NameError("BAD_WD")
+                #autostart
+                if "autostart" in data["programs"][elem]:
+                    if type(data["programs"][elem]["autostart"]) != bool:
+                        raise NameError("BAD_AS")
+                #autorestart
+                if "autorestart" in data["programs"][elem]:
+                    if type(data["programs"][elem]["autorestart"]) == str:
+                            if data["programs"][elem]["autorestart"] != "unexepected":
+                                raise NameError("BAD_AR")
+                    elif type(data["programs"][elem]["autorestart"]) != bool:
+                        raise NameError("BAD_AR")
+                #startretries
+                if "startretries" in data["programs"][elem]:
+                    if type(data["programs"][elem]["startretries"]) != int:
+                        raise NameError("BAD_SR")
+                #starttime
+                if "starttime" in data["programs"][elem]:
+                    if type(data["programs"][elem]["starttime"]) != int:
+                        raise NameError("BAD_ST")
+                #stopsignal
+                list_signal = ["SIGTERM", "SIGINT", "SIGQUIT", "SIGHUP", "SIGKILL", "SIGUSR1", "SIGUSR2"]
+                if "stopsignal" in data["programs"][elem]:
+                    if type(data["programs"][elem]["stopsignal"]) != str:
+                        raise NameError("BAD_SS")
+                    if data["programs"][elem]["stopsignal"] not in list_signal:
+                        raise NameError("BAD_SS")
+                #stoptime
+                if "stoptime" in data["programs"][elem]:
+                    if type(data["programs"][elem]["stoptime"]) != int:
+                        raise NameError("BAD_STT")
+                #stdout
+                if "stdout" in data["programs"][elem]:
+                    if type(data["programs"][elem]["stdout"]) != str:
+                        raise NameError("BAD_STDOUT")
+                    if not os.path.exists(data["programs"][elem]["working_dir"]) or not\
+                            os.path.isfile(data["programs"][elem]["working_dir"]) or os.path.isdir(data["programs"][elem]["working_dir"]):
+                        raise NameError("BAD_STDOUT")
+                #stderr
+                if "stderr" in data["programs"][elem]:
+                    if type(data["programs"][elem]["stderr"]) != str:
+                        raise NameError("BAD_STDERR")
+                    if not os.path.exists(data["programs"][elem]["working_dir"]) or not\
+                            os.path.isfile(data["programs"][elem]["working_dir"]) or os.path.isdir(data["programs"][elem]["working_dir"]):
+                        raise NameError("BAD_STDERR")
+                #exitcodes
+                if "exitcodes" in data["programs"][elem]:
+                    if type(data["programs"][elem]["exitcodes"]) == list:
+                        for elem in data["programs"][elem]["exitcodes"]:
+                            if type(elem) != int:
+                                raise NameError("BAD_EX")
+                    elif type(data["programs"][elem]["exitcodes"]) != int:
+                        raise NameError("BAD_EX")
+        except NameError as e:
+            if e.__str__() == "NO_CMD":
+                print("Error: No cmd in config file")
+            elif e.__str__() == "NO_PROG":
+                print("Error: No programs in config file")
+            elif e.__str__() == "BAD_NP":
+                print("Error: numprocs invalid type, use int type")
+            elif e.__str__() == "BAD_UM":
+                print("Error: umask invalid type, use int type")
+            elif e.__str__() == "BAD_WD":
+                print("Error: workdir is invalid, use str type or file exist")
+            elif e.__str__() == "BAD_AS":
+                print("Error: autostart is invalid, use bool type")
+            elif e.__str__() == "BAD_AR":
+                print("Error: autorestart is invalid, use bool type or unexpected")
+            elif e.__str__() == "BAD_SR":
+                print("Error: startretries is invalid, use int type")
+            elif e.__str__() == "BAD_ST":
+                print("Error: starttime is invalid, use int type")
+            elif e.__str__() == "BAD_SS":
+                print("Error: stropsignal is invalid, use str type")
+            elif e.__str__() == "BAD_STT":
+                print("Error: stoptime is invalid, use int type")
+            elif e.__str__() == "BAD_STDOUT":
+                print("Error: stdout is invalid, use str type or file exist")
+            elif e.__str__() == "BAD_STDERR":
+                print("Error: stderr is invalid, use str type or file exist")
+            elif e.__str__() == "BAD_EX":
+                print("Error: exitcodes is invalid, use int type")
+            else:
+                print(e)
+            sys.exit(-1)
+        except Exception as e:
+            print("Error: {}".format(e))
+            sys.exit(0)
 
     def _clean_config(self, data):
         config = {}
@@ -83,7 +186,7 @@ class Orchestrator():
         if "umask" in data.keys():
             config["umask"] = data["umask"]
         else:
-            config["umask"] = "022"
+            config["umask"] = 18 #022
 
         if "working_dir" in data.keys():
             config["working_dir"] = data["working_dir"]
@@ -98,7 +201,7 @@ class Orchestrator():
         if "autorestart" in data.keys():
             config["autorestart"] = data["autorestart"]
         else:
-            config["autorestart"] = "unexepected"
+            config["autorestart"] = "unexpected"
 
         if "startretries" in data.keys():
             config["startretries"] = data["startretries"]
