@@ -15,7 +15,7 @@ class Supervisord:
         signal.signal(signal.SIGINT, self.quit)
         signal.signal(signal.SIGQUIT, self.quit)
 
-    def quit(self):
+    def quit(self, sig, frame):
         del self.claudio_abbado
         sys.exit(0)
 
@@ -28,18 +28,19 @@ class Supervisord:
         self.socket.bind(('', 5678))
         self.socket.listen(5)
         print('attend connexion')
-        stream_client, info_client = self.socket.accept()
+        self.stream_client, info_client = self.socket.accept()
         print('connexion accept')
         msg = b''
         while msg != b'quit':
-            msg = stream_client.recv(1024)
+            msg = self.stream_client.recv(1024)
             print(msg)
             stream_client.send(b'nude')
-        stream_client.close()
+        self.stream_client.close()
         self.socket.close()
 
 def main(conf_file):
     supervisord = Supervisord(conf_file)
+#    supervisord.run_supervisord()
     thread = threading.Thread(target=supervisord.run_supervisord, daemon=True)
     thread.start()
     supervisord.run_server()

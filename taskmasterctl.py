@@ -1,3 +1,4 @@
+import readline
 import socket
 import sys
 
@@ -105,8 +106,19 @@ class Taskmasterclt():
         else:
             self.dic_command[args[0]](args.pop(0), args)
 
+cmds = ["status", "start", "stop", "restart", "update", "reload", "pid", "quit", "shutdown", "help"]
 
+def completion(text, state):
+    matches = [s for s in cmds if s and s.startswith(text)]
+#    print(matches, state)
+    try:
+        return matches[state] + ' '
+    except IndexError:
+        return None
+        
 ctl = Taskmasterclt()
+readline.set_completer(completion)
+readline.parse_and_bind('tab: complete')
 
 while True:
     cmd = input("taskmaster> ")
