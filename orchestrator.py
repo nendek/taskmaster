@@ -7,11 +7,12 @@ from program import Program
 
 class Orchestrator():
     def __init__(self, config_file_name):
+        self.pid = os.getpid()
         self.path = os.path.join(os.path.abspath(os.path.dirname(config_file_name)), config_file_name)
         self.configs = {}
         self.configs = self._get_configs()
         self.programs = self.start()
-        signal.signal(signal.SIGHUP, self._reload_conf)
+        signal.signal(signal.SIGHUP, self.reload_conf)
 
     def start(self):
         progs = []
@@ -43,12 +44,15 @@ class Orchestrator():
                             process.start(program.data)
 
     def show_processes(self):
+        string = ""
         self.update_processes()
         for program in self.programs:
-            for process in program.process:
-                print("nom du programme: {}".format(process.name_proc))
-                print(process)
-            print("")
+            for proc in program.process:
+                if proc.pid != 0:
+                    string += "{}\t\t{}\tpid{}, uptime{}\n".format(proc.name_proc, proc.status, proc.pid, (time.time() - proc.start_time))
+                else:
+                    string += "{}\t\t{}\t{}\n".format(proc.name_proc, proc.status, proc.end_date)
+            return string
 
     def _get_configs(self):
         configs = {"programs": {}}
@@ -286,7 +290,7 @@ class Orchestrator():
                 return
         return
 
-    def _reload_conf(self, signum, stack):
+    def reload_conf(self, signum, stack):
         new_configs = self._get_configs()
         for prog in self.programs:
             if prog.name_prog not in new_configs["programs"]:
@@ -312,48 +316,61 @@ class Orchestrator():
     def _same_configs(self, dic1, dic2):
         return True
 
+    def start_all_proc(self):
+        response = ""
+        for program in self.programs:
+            response += program.start_all()
+        return response
+
     def start_proc(self, name):
+        response = ""
         for program in self.programs:
             if program.start(name):
-                return
-        print("name error")
-        return
+                reponse = "{}\tstarted\n".format(name)
+                return response
+        return response
     
-    def start_all_proc(self):
-        for program in self.programs:
-            program.start_all()
-        return
-
     def kill_all_proc(self):
+        response = ""
         for program in self.programs:
-            program.kill_all()
+            response += program.kill_all()
+        return response
 
     def kill_proc(self, name):
+        response = ""
         for program in self.programs:
             if program.kill(name):
-                return
-        print("name error")
-        return
+                reponse = "{}\tkilled\n".format(name)
+                return response
+        response = "{}\tnot exist\n".format(name)
+        return response
     
     def stop_all_proc(self):
+        response = ""
         for program in self.programs:
-            program.stop_all()
+            response += program.stop_all()
+        return response
 
     def stop_proc(self, name):
+        response = ""
         for program in self.programs:
             if program.stop(name):
-                return
-        print("name error")
-        return
-    
-    def restart_proc(self, name):
-        for program in self.programs:
-            if program.restart(name):
-                return
-        print("name error")
-        return
+                reponse = "{}\tstopped\n".format(name)
+                return response
+        response = "{}\tnot exist\n".format(name)
+        return response
     
     def restart_all_proc(self):
+        reponse = ""
         for program in self.programs:
-            program.restart_all()
-        return
+            response += program.restart_all()
+        return response
+
+    def restart_proc(self, name):
+        response = ""
+        for program in self.programs:
+            if program.restart(name):
+                reponse = "{}\trestarted\n".format(name)
+                return response
+        response = "{}\tnot exist\n".format(name)
+        return response

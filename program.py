@@ -98,9 +98,11 @@ class Program:
         return
     
     def kill_all(self):
+        response = ""
         for process in self.process:
+            response += "{}\tkilled\n".format(process.name_proc)
             process.kill()
-        return
+        return response
     
     def kill(self, name):
         for process in self.process:
@@ -110,9 +112,11 @@ class Program:
         return 0
 
     def stop_all(self):
+        response = ""
         for process in self.process:
+            response += "{}\tstopped\n".format(process.name_proc)
             process.stop(self.stopsignal)
-        return
+        return response
 
     def stop(self, name):
         for process in self.process:
@@ -122,9 +126,11 @@ class Program:
         return 0
     
     def start_all(self):
+        response = ""
         for process in self.process:
+            response += "{}\tstarted\n".format(process.name_proc)
             process.start(self.data)
-        return
+        return response
 
     def start(self, name):
         for process in self.process:
@@ -134,9 +140,11 @@ class Program:
         return 0
     
     def restart_all(self):
+        response = ""
         for process in self.process:
+            response += "{}\trestarted\n".format(process.name_proc)
             process.restart(self.data)
-        return
+        return response
 
     def restart(self, name):
         for process in self.process:
