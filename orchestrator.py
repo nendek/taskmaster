@@ -2,23 +2,27 @@ import yaml
 import time
 import signal
 import os
+import sys
 from program import Program
 
 class Orchestrator():
     def __init__(self, config_file_name):
         self.path = os.path.join(os.path.abspath(os.path.dirname(config_file_name)), config_file_name)
         self.configs = {}
+        self.configs = self._get_configs()
         self.programs = self.start()
-        signal.signal(signal.SIGHUP, self.reload_conf)
+        signal.signal(signal.SIGHUP, self._reload_conf)
 
     def start(self):
-        data = self.get_config_file()
-        self.configs = {"programs": {}}
         progs = []
-        for elem in data["programs"]:
-            self.configs["programs"][elem] = self.clean_config(data["programs"][elem])
+        for elem in self.configs["programs"]:
             progs.append(Program(self.configs["programs"][elem], elem))
         return progs
+    
+    def __del__(self):
+        for prog in self.programs:
+            del prog
+        print("all programes deleted")
 
     def update_processes(self):
         """
@@ -33,7 +37,7 @@ class Orchestrator():
                 if program.autorestart == True:
                     if process.status == "EXITED":
                         process.start(program.data)
-                if program.autorestart == "unexpeced":
+                if program.autorestart == "unexpected":
                     if process.status == "EXITED":
                         if process.return_code not in program.exitcodes:
                             process.start(program.data)
@@ -46,29 +50,137 @@ class Orchestrator():
                 print(process)
             print("")
 
-    def get_config_file(self):
+    def _get_configs(self):
+        configs = {"programs": {}}
+        data = self._get_config_file()
+        for elem in data["programs"]:
+            configs["programs"][elem] = self._clean_config(data["programs"][elem])
+        return configs
+
+    def _get_config_file(self):
         with open(self.path) as f:
             try:
                 data = yaml.safe_load(f)
-                if not "programs" in data.keys():
-                    raise NameError("NO_PROG")
-                for elem in data["programs"]:
-                    if not "cmd" in data["programs"][elem]:
-                        raise NameError("NO_CMD")
+                self._parsing_yaml(data)
             except yaml.YAMLError as e:
                 print("YAML file format error:")
                 print(e)
-            except NameError as e:
-                if e.__str__() == "NO_CMD":
-                    print("No cmd in config file")
-                elif e.__str__() == "NO_PROG":
-                    print("No programs in config file")
-                else:
-                    raise e
         return data
-        
+    
+    def _parsing_yaml(self, data):
+        try:
+            if not "programs" in data.keys():
+                raise NameError("NO_PROG")
+            for elem in data["programs"]:
+                #cmd
+                if not "cmd" in data["programs"][elem]:
+                    raise NameError("NO_CMD")
+                elif type(data["programs"][elem]["cmd"]) != str:
+                    raise NameError("BAD_CMD")
+                #numprocs
+                if "numprocs" in data["programs"][elem]:
+                    if type(data["programs"][elem]["numprocs"]) != int:
+                        raise NameError("BAD_NP")
+                #umask
+                if "umask" in data["programs"][elem]:
+                    if type(data["programs"][elem]["umask"]) != int:
+                        raise NameError("BAD_UM")
+                #working_dir
+                if "working_dir" in data["programs"][elem]:
+                    if type(data["programs"][elem]["working_dir"]) != str:
+                        raise NameError("BAD_WD")
+                    if not os.path.exists(data["programs"][elem]["working_dir"]) or not\
+                            os.path.isdir(data["programs"][elem]["working_dir"]):
+                                raise NameError("BAD_WD")
+                #autostart
+                if "autostart" in data["programs"][elem]:
+                    if type(data["programs"][elem]["autostart"]) != bool:
+                        raise NameError("BAD_AS")
+                #autorestart
+                if "autorestart" in data["programs"][elem]:
+                    if type(data["programs"][elem]["autorestart"]) == str:
+                            if data["programs"][elem]["autorestart"] != "unexepected":
+                                raise NameError("BAD_AR")
+                    elif type(data["programs"][elem]["autorestart"]) != bool:
+                        raise NameError("BAD_AR")
+                #startretries
+                if "startretries" in data["programs"][elem]:
+                    if type(data["programs"][elem]["startretries"]) != int:
+                        raise NameError("BAD_SR")
+                #starttime
+                if "starttime" in data["programs"][elem]:
+                    if type(data["programs"][elem]["starttime"]) != int:
+                        raise NameError("BAD_ST")
+                #stopsignal
+                list_signal = ["SIGTERM", "SIGINT", "SIGQUIT", "SIGHUP", "SIGKILL", "SIGUSR1", "SIGUSR2"]
+                if "stopsignal" in data["programs"][elem]:
+                    if type(data["programs"][elem]["stopsignal"]) != str:
+                        raise NameError("BAD_SS")
+                    if data["programs"][elem]["stopsignal"] not in list_signal:
+                        raise NameError("BAD_SS")
+                #stoptime
+                if "stoptime" in data["programs"][elem]:
+                    if type(data["programs"][elem]["stoptime"]) != int:
+                        raise NameError("BAD_STT")
+                #stdout
+                if "stdout" in data["programs"][elem]:
+                    if type(data["programs"][elem]["stdout"]) != str:
+                        raise NameError("BAD_STDOUT")
+                    if not os.path.exists(data["programs"][elem]["working_dir"]) or not\
+                            os.path.isfile(data["programs"][elem]["working_dir"]) or os.path.isdir(data["programs"][elem]["working_dir"]):
+                        raise NameError("BAD_STDOUT")
+                #stderr
+                if "stderr" in data["programs"][elem]:
+                    if type(data["programs"][elem]["stderr"]) != str:
+                        raise NameError("BAD_STDERR")
+                    if not os.path.exists(data["programs"][elem]["working_dir"]) or not\
+                            os.path.isfile(data["programs"][elem]["working_dir"]) or os.path.isdir(data["programs"][elem]["working_dir"]):
+                        raise NameError("BAD_STDERR")
+                #exitcodes
+                if "exitcodes" in data["programs"][elem]:
+                    if type(data["programs"][elem]["exitcodes"]) == list:
+                        for elem in data["programs"][elem]["exitcodes"]:
+                            if type(elem) != int:
+                                raise NameError("BAD_EX")
+                    elif type(data["programs"][elem]["exitcodes"]) != int:
+                        raise NameError("BAD_EX")
+        except NameError as e:
+            if e.__str__() == "NO_CMD":
+                print("Error: No cmd in config file")
+            elif e.__str__() == "NO_PROG":
+                print("Error: No programs in config file")
+            elif e.__str__() == "BAD_NP":
+                print("Error: numprocs invalid type, use int type")
+            elif e.__str__() == "BAD_UM":
+                print("Error: umask invalid type, use int type")
+            elif e.__str__() == "BAD_WD":
+                print("Error: workdir is invalid, use str type or file exist")
+            elif e.__str__() == "BAD_AS":
+                print("Error: autostart is invalid, use bool type")
+            elif e.__str__() == "BAD_AR":
+                print("Error: autorestart is invalid, use bool type or unexpected")
+            elif e.__str__() == "BAD_SR":
+                print("Error: startretries is invalid, use int type")
+            elif e.__str__() == "BAD_ST":
+                print("Error: starttime is invalid, use int type")
+            elif e.__str__() == "BAD_SS":
+                print("Error: stropsignal is invalid, use str type")
+            elif e.__str__() == "BAD_STT":
+                print("Error: stoptime is invalid, use int type")
+            elif e.__str__() == "BAD_STDOUT":
+                print("Error: stdout is invalid, use str type or file exist")
+            elif e.__str__() == "BAD_STDERR":
+                print("Error: stderr is invalid, use str type or file exist")
+            elif e.__str__() == "BAD_EX":
+                print("Error: exitcodes is invalid, use int type")
+            else:
+                print(e)
+            sys.exit(-1)
+        except Exception as e:
+            print("Error: {}".format(e))
+            sys.exit(0)
 
-    def clean_config(self, data):
+    def _clean_config(self, data):
         config = {}
         config["cmd"] = data["cmd"]
         if "numprocs" in data.keys():
@@ -79,7 +191,7 @@ class Orchestrator():
         if "umask" in data.keys():
             config["umask"] = data["umask"]
         else:
-            config["umask"] = "022"
+            config["umask"] = 18 #022
 
         if "working_dir" in data.keys():
             config["working_dir"] = data["working_dir"]
@@ -94,7 +206,7 @@ class Orchestrator():
         if "autorestart" in data.keys():
             config["autorestart"] = data["autorestart"]
         else:
-            config["autorestart"] = "unexepected"
+            config["autorestart"] = "unexpected"
 
         if "startretries" in data.keys():
             config["startretries"] = data["startretries"]
@@ -159,19 +271,43 @@ class Orchestrator():
             config["var_env"] = {}
 
         return config
+    
+    def _refresh_conf_prog(self, name, configs):
+        for prog in self.programs:
+            if prog.name_prog == name:
+                prog.refresh_conf(configs)
+                return
+        return
+        
+    def _reload_prog(self, name, configs):
+        for prog in self.programs:
+            if prog.name_prog == name:
+                prog.reload(configs)
+                return
+        return
 
-    def reload_conf(self, signum, stack):
-        pass
-#        data = self.get_config_file()
-#        progs = []
-#        for program in self.programs:
-#            if program.name_prog not in data["programs"]:
-#                del program
-#            elif self._same_configs(program.config, data["programs"][program.name_prog]) == False:
-#                progs.append(Program(data["programs"][program.name_prog], program.name_prog, start=False))
-#                del program
-
-
+    def _reload_conf(self, signum, stack):
+        new_configs = self._get_configs()
+        for prog in self.programs:
+            if prog.name_prog not in new_configs["programs"]:
+                del prog
+        for prog in self.configs["programs"]:
+            if self.configs["programs"][prog]["numprocs"] !=  new_configs["programs"][prog]["numprocs"]:
+                self._reload_prog(elem, new_configs["programs"][prog])
+            elif self.configs["programs"][prog]["umask"] !=  new_configs["programs"][prog]["umask"]:
+                self._reload_prog(elem, new_configs["programs"][prog])
+            elif self.configs["programs"][prog]["working_dir"] !=  new_configs["programs"][prog]["working_dir"]:
+                self._reload_prog(elem, new_configs["programs"][prog])
+            elif self.configs["programs"][prog]["stdout"] !=  new_configs["programs"][prog]["stdout"]:
+                self._reload_prog(elem, new_configs["programs"][prog])
+            elif self.configs["programs"][prog]["stderr"] !=  new_configs["programs"][prog]["stderr"]:
+                self._reload_prog(elem, new_configs["programs"][prog])
+            elif self.configs["programs"][prog]["var_env"] !=  new_configs["programs"][prog]["var_env"]:
+                self._reload_prog(elem, new_configs["programs"][prog])
+            else:
+                self._refresh_conf_prog(prog, new_configs["programs"][prog])
+        self.configs = new_configs
+        return
 
     def _same_configs(self, dic1, dic2):
         return True

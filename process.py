@@ -101,7 +101,10 @@ class Process:
             except OSError as e:
                 print("cant chdir: {}".format(e))
         try:
-            os.umask(int(data["umask"], 8))
+            if type(data["umask"]) == str:
+                os.umask(int(data["umask"], 8))
+            else:
+                os.umask(data["umask"])
         except OSError as e:
             print("cant umask: {}".format(e))
         os.execve(data["cmd"], data["args"], data["env"])
