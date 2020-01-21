@@ -6,7 +6,8 @@ import sys
 import signal
 
 class Process:
-    def __init__(self, name):
+    def __init__(self, name, logger):
+        self.logger = logger
         self.name_proc = name
         self.pid = 0
         self.status = "STOPPED"
@@ -67,7 +68,7 @@ class Process:
             self.return_code = os.WEXITSTATUS(status[1])
             self.pid = 0
         except Exception as e:
-            print(e)
+            self.logger.error(e)
         finally:
             return
         return
@@ -105,14 +106,14 @@ class Process:
             try:
                 os.chdir(data["working_dir"])
             except OSError as e:
-                print("cant chdir: {}".format(e))
+                self.logger.error("cant chdir: {}".format(e))
         try:
             if type(data["umask"]) == str:
                 os.umask(int(data["umask"], 8))
             else:
                 os.umask(data["umask"])
         except OSError as e:
-            print("cant umask: {}".format(e))
+            self.logger.error("cant umask: {}".format(e))
         os.execve(data["cmd"], data["args"], data["env"])
         sys.exit()
     
@@ -128,7 +129,7 @@ class Process:
                 os.kill(self.pid, signal)
                 self.status = "STOPPED"
         except Exception as e:
-            print(e)
+            self.logger.error(e)
             return -1
         else:
             return 0
