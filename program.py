@@ -41,8 +41,10 @@ class Program():
 
         if config["stdout"] != False:
             self.stdout = config["stdout"]
-            self.fdout = os.open(self.stdout, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
-            if self.fdout < 0:
+            try:
+                self.fdout = os.open(self.stdout, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
+            except Exception as e:
+                self.logger.warning("Error: {}".format(e)
                 self.fdout = -1
         else:
             self.stdout = False
@@ -50,15 +52,16 @@ class Program():
 
         if config["stderr"] != False:
             self.stderr = config["stderr"]
-            self.fderr = os.open(self.stderr, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
-            if self.fderr < 0:
-                self.fderr = -1
+            try:
+                self.fderr = os.open(self.stderr, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
+            except Exception as e:
+                self.logger.warning("Error: {}".format(e)
+                self.fdout = -1
         else:
             self.stderr = False
             self.fderr = -1
         self.exitcodes = config["exitcodes"]
         self.var_env = config["var_env"].copy()
-
         self.bin, self.args = self.parse_cmd()
         self._update_data()
         

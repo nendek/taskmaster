@@ -105,14 +105,22 @@ class Process:
 
 
     def _launch_process(self, data):
-        if data["fdout"] > 0:
-            os.dup2(data["fdout"], sys.stdout.fileno())
-        if data["fderr"] > 0:
-            os.dup2(data["fderr"], sys.stderr.fileno())
+        try:
+            if data["fdout"] > 0:
+                os.dup2(data["fdout"], sys.stdout.fileno())
+            if data["fderr"] > 0:
+                os.dup2(data["fderr"], sys.stderr.fileno())
+        except:
+            except OSError as e:
+                self.logger.error("cant dup2: {}".format(e))
+            except Exception as e:
+                self.logger.error("cant dup2: {}".format(e))
         if data["working_dir"] != '.':
             try:
                 os.chdir(data["working_dir"])
             except OSError as e:
+                self.logger.error("cant chdir: {}".format(e))
+            except Exception as e:
                 self.logger.error("cant chdir: {}".format(e))
         try:
             if type(data["umask"]) == str:
@@ -121,7 +129,12 @@ class Process:
                 os.umask(data["umask"])
         except OSError as e:
             self.logger.error("cant umask: {}".format(e))
-        os.execve(data["cmd"], data["args"], data["env"])
+        try:
+            os.execve(data["cmd"], data["args"], data["env"])
+        except OSError as e:
+            self.logger.error("cant execve: {}".format(e))
+        except Exception as e:
+            self.logger.error("cant execve: {}".format(e))
         sys.exit()
     
     def kill(self):

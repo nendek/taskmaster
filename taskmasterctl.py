@@ -1,6 +1,7 @@
 import readline
 import socket
 import sys
+import signal
 
 error_name_missing = "Error: {0} requires a process name\n\
 {0} <name>\t\t{0} a process\n\
@@ -35,6 +36,9 @@ class Taskmasterclt():
         self.stream_serv = None
         self.create_connection()
         self.one_arg("status", "")
+        signal.signal(signal.SIGTERM, self.quit)
+        signal.signal(signal.SIGINT, self.quit)
+        signal.signal(signal.SIGQUIT, self.quit)
 
     def create_connection(self):
         try:
