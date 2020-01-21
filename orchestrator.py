@@ -296,6 +296,7 @@ class Orchestrator():
         return
 
     def reload_conf(self, signum, stack):
+        self.logger.info("loading config file")
         new_configs = self._get_configs()
         for prog in self.programs:
             if prog.name_prog not in new_configs["programs"]:
@@ -316,6 +317,7 @@ class Orchestrator():
             else:
                 self._refresh_conf_prog(prog, new_configs["programs"][prog])
         self.configs = new_configs
+        self.logger.info("config file well loaded")
         return
 
     def _same_configs(self, dic1, dic2):

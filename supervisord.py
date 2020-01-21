@@ -28,6 +28,7 @@ class Supervisord:
         self.logger.addHandler(file_handler)
 
     def quit(self, sig, frame):
+        self.logger.warning("taskmasterd received signal {}".format(sig))
         self.claudio_abbado.quit()
         del self.claudio_abbado
         sys.exit(0)
@@ -98,9 +99,9 @@ class Supervisord:
         return response
 
     def _wait_connexion(self):
-        self.logger.info('dameon waiting for client')
+        self.logger.info('daemon waiting for client')
         stream_client, info_client = self.socket.accept()
-        self.logger.info('daemon successfully connected to client')
+        self.logger.info('client successfully connected to daemon')
         return stream_client
 
     def run_server(self):
@@ -117,6 +118,7 @@ class Supervisord:
             msg = stream_client.recv(1024)
             if msg == b'':
                 stream_client.close()
+                self.logger.info("client disconnected")
                 stream_client = self._wait_connexion()
             response = self._handle_cmd(msg, stream_client)
             try:

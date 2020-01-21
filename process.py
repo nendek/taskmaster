@@ -46,7 +46,9 @@ class Process:
                 self._launch_process(data)
             else:
                 self.pid = pid
+                self.logger.info("process {} started".format(self.name_proc))
                 self._create_listener()
+                self.logger.info("process {} is now in STARTING state".format(self.name_proc))
                 self.status = "STARTING"
                 self.update_status()
                 return
@@ -81,6 +83,7 @@ class Process:
             if self.status == "STARTING":
                 if now > self.start_time + self.starting_time:
                     self.status = "RUNNING"
+                    self.logger.info("process {} is now in RUNNING state".format(self.name_proc))
                     self.nb_start = 0
             if self.status == "STOPPING":
                 if now > self.stop_time + self.stopping_time:
@@ -89,12 +92,16 @@ class Process:
             if self.status == "STARTING":
                 if self.end_time < self.start_time + self.starting_time:
                     self.status = "BACKOFF"
+                    self.logger.info("process {} is now in BACKOFF state".format(self.name_proc))
                 else:
                     self.status = "EXITED"
+                    self.logger.info("process {} is now in EXITED state".format(self.name_proc))
             if self.status == "RUNNING":
                 self.status = "EXITED"
+                self.logger.info("process {} is now in EXITED state".format(self.name_proc))
             if self.status == "STOPPING":
                 self.status = "STOPPED"
+                self.logger.info("process {} is now in STOPPED state".format(self.name_proc))
 
 
     def _launch_process(self, data):
@@ -127,7 +134,8 @@ class Process:
         try:
             if self.pid != 0:
                 os.kill(self.pid, signal)
-                self.status = "STOPPED"
+                self.status = "STOPPING"
+                self.logger.info("process {} is now in STOPPING state".format(self.name_proc))
         except Exception as e:
             self.logger.error(e)
             return -1
