@@ -10,7 +10,6 @@ class Process:
         self.name_proc = name
         self.pid = 0
         self.status = "STOPPED"
-        self.start_date = None
         self.nb_start = 0
         self.max_start = 0
 
@@ -20,13 +19,12 @@ class Process:
         self.stop_time = 0
         self.stopping_time = 0 # time to wait before STOPPING to STOPPED state
 
-        self.end_date = None
-        self.end_time = None
+        self.end_time = 0
         self.return_code = None
     
     def __str__(self):
-        return "Process\n\tpid: {}\n\tstatus: {}\n\tstart_date: {}\n"\
-        "\tend_date: {}\n\treturn_code: {}".format(self.pid, self.status, self.start_date, self.end_date, self.return_code)
+        return "Process\n\tpid: {}\n\tstatus: {}\n\t"\
+        "\t\treturn_code: {}".format(self.pid, self.status, self.return_code)
 
     def start(self, data):
         if self.pid == 0:
@@ -35,9 +33,8 @@ class Process:
             if (self.nb_start > self.max_start):
                 self.status = "FATAL"
                 return 
-            self.start_date = datetime.now()
             self.start_time = time.time()
-            self.end_time = None
+            self.end_time = 0
             self.starting_time = data["starttime"]
             self.stopping_time = data["stoptime"]
             pid = os.fork()
@@ -63,7 +60,6 @@ class Process:
         try:
             status = os.waitpid(self.pid, 0)
             self.end_time = time.time()
-            self.end_date = datetime.now()
             self.return_code = os.WEXITSTATUS(status[1])
             self.pid = 0
         except Exception as e:
@@ -121,6 +117,7 @@ class Process:
 
     def stop(self, stopsignal):
         self._send_signal(stopsignal)
+        self.stop_time = time.time()
 
     def _send_signal(self, signal): # put nb_start to 0
         try:

@@ -100,7 +100,7 @@ class Program:
     def kill_all(self):
         response = ""
         for process in self.process:
-            response += "{}\tkilled\n".format(process.name_proc)
+            response += "{:30} killed\n".format(process.name_proc)
             process.kill()
         return response
     
@@ -114,7 +114,7 @@ class Program:
     def stop_all(self):
         response = ""
         for process in self.process:
-            response += "{}\tstopped\n".format(process.name_proc)
+            response += "{:30} stopped\n".format(process.name_proc)
             process.stop(self.stopsignal)
         return response
 
@@ -128,7 +128,7 @@ class Program:
     def start_all(self):
         response = ""
         for process in self.process:
-            response += "{}\tstarted\n".format(process.name_proc)
+            response += "{:30} started\n".format(process.name_proc)
             process.start(self.data)
         return response
 
@@ -142,7 +142,7 @@ class Program:
     def restart_all(self):
         response = ""
         for process in self.process:
-            response += "{}\trestarted\n".format(process.name_proc)
+            response += "{:30} restarted\n".format(process.name_proc)
             process.restart(self.data)
         return response
 

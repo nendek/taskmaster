@@ -2,7 +2,6 @@ import sys
 import os
 import argparse
 import signal
-import time
 from process import Process
 from orchestrator import Orchestrator
 import threading
@@ -29,7 +28,7 @@ class Supervisord:
         msg = msg.decode()
         msg = msg.split()
         if len(msg) == 0:
-            return "empty msg"
+            return "empty msg\n"
         if msg[0] == "status":
             response = self.claudio_abbado.show_processes()
         elif msg[0] == "start":
@@ -42,7 +41,7 @@ class Supervisord:
                         response = prog.start_all()
                         break
                 if response == "":
-                    response = "{}\tgroup not exist\n".format(group[0])
+                    response = "{:30} group not exist\n".format(group[0])
             else:
                 for i in range(1, len(msg)):
                     response += self.claudio_abbado.start_proc(msg[i])
@@ -56,7 +55,7 @@ class Supervisord:
                         response = prog.stop_all()
                         break
                 if response == "":
-                    response = "{}\tgroup not exist\n".format(group[0])
+                    response = "{:30} group not exist\n".format(group[0])
             else:
                 for i in range(1, len(msg)):
                     response += self.claudio_abbado.stop_proc(msg[i])
@@ -70,7 +69,7 @@ class Supervisord:
                         response = prog.restart_all()
                         break
                 if response == "":
-                    response = "{}\tgroup not exist\n".format(group[0])
+                    response = "{:30}\tgroup not exist\n".format(group[0])
             else:
                 for i in range(1, len(msg)):
                     response += self.claudio_abbado.restart_proc(msg[i])
@@ -81,8 +80,10 @@ class Supervisord:
             response = "taskmasterd pid is {}\n".format(self.claudio_abbado.pid)
         elif msg[0] == "shutdown":
             response = "taskmasterd pid {} shutdown\n".format(self.claudio_abbado.pid)
+            response = response[:-1]
             stream.send(response.encode())
             self.quit(1,1)
+        response = response[:-1]
         return response
 
     def _wait_connexion(self):

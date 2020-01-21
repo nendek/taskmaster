@@ -8,6 +8,14 @@ error_name_missing = "Error: {0} requires a process name\n\
 {0} <name> <name>\t{0} multiple processes or groups\n\
 {0} all\t\t{0} all processes"
 
+class bcolors:
+    CMD = '\033[92m'
+    FIRST = '\033[93m'
+    ERR = '\033[91m'
+    GB = '\033[35m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+
 class Taskmasterclt():
     def __init__(self):
         self.dic_command = {
@@ -33,7 +41,9 @@ class Taskmasterclt():
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((self.host, self.port))
         except Exception as e:
+            print(f"{bcolors.ERR}", end='')
             print("Error: {}".format(e))
+            print(f"{bcolors.ENDC}", end='')
             sys.exit(0)
         self.stream_serv = sock
         return
@@ -44,9 +54,10 @@ class Taskmasterclt():
         self.stream_serv.send(msg)
         msg = self.stream_serv.recv(1024)
         if msg == b'':
-            print("taskamasterd not running")
+            print(f"{bcolors.ERR}taskmasterd not running{bcolors.ENDC}")
             self.stream_serv.close()
             return
+        print(f"{bcolors.ENDC}", end='')
         print(msg.decode())
     
     def one_arg(self, cmd, args):
@@ -67,6 +78,7 @@ class Taskmasterclt():
         print("{} not implemented yet".format(cmd))
     
     def quit(self, cmd, args):
+        print(f"{bcolors.GB}{bcolors.BOLD}Goodbye Bro...{bcolors.ENDC}")
         sys.exit(0)
     
     def print_help(cmd, args):
@@ -77,11 +89,13 @@ class Taskmasterclt():
         if len(args) == 0:
             return 
         if args[0] not in self.dic_command:
+            print(f"{bcolors.ERR}", end='')
             print("*** Unknown syntax: {}".format(args[0]))
             return 
         else:
             self.dic_command[args[0]](args.pop(0), args)
 
+print(f"{bcolors.GB}{bcolors.BOLD}Hello Bro !{bcolors.ENDC}")
 cmds = ["status", "start", "stop", "restart", "update", "reload", "pid", "quit", "shutdown", "help"]
 
 def completion(text, state):
@@ -96,5 +110,5 @@ readline.set_completer(completion)
 readline.parse_and_bind('tab: complete')
 
 while True:
-    cmd = input("taskmaster> ")
+    cmd = input(f"{bcolors.FIRST}{bcolors.BOLD}taskmaster> {bcolors.ENDC}{bcolors.CMD}")
     ctl.handle_cmd(cmd)

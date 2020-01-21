@@ -49,9 +49,12 @@ class Orchestrator():
         for program in self.programs:
             for proc in program.process:
                 if proc.pid != 0:
-                    string += "{}\t\t{}\tpid{}, uptime{}\n".format(proc.name_proc, proc.status, proc.pid, (time.time() - proc.start_time))
+                    string += "{:30} {:10} pid {:10} uptime      {}\n".format(proc.name_proc, proc.status, proc.pid, time.strftime("%H:%M:%S", time.gmtime(time.time() - proc.start_time)))
                 else:
-                    string += "{}\t\t{}\t{}\n".format(proc.name_proc, proc.status, proc.end_date)
+                    if proc.end_time == 0:
+                        string += "{:30} {:10}\n".format(proc.name_proc, proc.status)
+                    else:
+                        string += "{:30} {:25} {}\n".format(proc.name_proc, proc.status, time.strftime("%b %d %Y %H:%M:%S", time.gmtime(proc.end_time)))
         return string
 
     def _get_configs(self):
@@ -327,8 +330,9 @@ class Orchestrator():
         response = ""
         for program in self.programs:
             if program.start(name):
-                response = "{}\tstarted\n".format(name)
+                response = "{:30} started\n".format(name)
                 return response
+        response = "{:30} not exist\n".format(name)
         return response
     
     def kill_all_proc(self):
@@ -341,9 +345,9 @@ class Orchestrator():
         response = ""
         for program in self.programs:
             if program.kill(name):
-                response = "{}\tkilled\n".format(name)
+                response = "{:30} killed\n".format(name)
                 return response
-        response = "{}\tnot exist\n".format(name)
+        response = "{:30} not exist\n".format(name)
         return response
     
     def stop_all_proc(self):
@@ -356,9 +360,9 @@ class Orchestrator():
         response = ""
         for program in self.programs:
             if program.stop(name):
-                response = "{}\tstopped\n".format(name)
+                response = "{:30} stopped\n".format(name)
                 return response
-        response = "{}\tnot exist\n".format(name)
+        response = "{:30} not exist\n".format(name)
         return response
     
     def restart_all_proc(self):
@@ -371,7 +375,7 @@ class Orchestrator():
         response = ""
         for program in self.programs:
             if program.restart(name):
-                response = "{}\trestarted\n".format(name)
+                response = "{:30} restarted\n".format(name)
                 return response
-        response = "{}\tnot exist\n".format(name)
+        response = "{:30} not exist\n".format(name)
         return response
