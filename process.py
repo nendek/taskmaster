@@ -59,11 +59,16 @@ class Process:
         return 
 
     def _check_process_state(self):
-        status = os.waitpid(self.pid, 0)
-        self.end_time = time.time()
-        self.end_date = datetime.now()
-        self.return_code = os.WEXITSTATUS(status[1])
-        self.pid = 0
+        try:
+            status = os.waitpid(self.pid, 0)
+            self.end_time = time.time()
+            self.end_date = datetime.now()
+            self.return_code = os.WEXITSTATUS(status[1])
+            self.pid = 0
+        except Exception as e:
+            print(e)
+        finally:
+            return
         return
 
     def update_status(self):
@@ -118,8 +123,9 @@ class Process:
 
     def _send_signal(self, signal): # put nb_start to 0
         try:
-            os.kill(self.pid, signal)
-            self.status = "STOPPED"
+            if self.pid != 0:
+                os.kill(self.pid, signal)
+                self.status = "STOPPED"
         except Exception as e:
             print(e)
             return -1

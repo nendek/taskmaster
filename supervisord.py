@@ -28,7 +28,7 @@ class Supervisord:
         msg = msg.decode()
         msg = msg.split()
         if len(msg) == 0:
-            return "empty msg".encode()
+            return "empty msg"
         if msg[0] == "status":
             response = self.claudio_abbado.show_processes()
         elif msg[0] == "start":
@@ -36,48 +36,62 @@ class Supervisord:
                 response = self.claudio_abbado.start_all_proc()
             else:
                 for i in range(1, len(msg)):
-                    reponse += self.claudio_abbado.start_proc(msg[i])
+                    response += self.claudio_abbado.start_proc(msg[i])
         elif msg[0] == "stop":
             if msg[1] == "all":
                 response = self.claudio_abbado.stop_all_proc()
             else:
                 for i in range(1, len(msg)):
-                    reponse += self.claudio_abbado.stop_proc(msg[i])
+                    response += self.claudio_abbado.stop_proc(msg[i])
         elif msg[0] == "restart":
             if msg[1] == "all":
                 response = self.claudio_abbado.restart_all_proc()
             else:
                 for i in range(1, len(msg)):
-                    reponse += self.claudio_abbado.restart_proc(msg[i])
+                    response += self.claudio_abbado.restart_proc(msg[i])
         elif msg[0] == "update":
             self.claudio_abbado.reload_conf(1, 1)
             response = "configuration reloaded"
         elif msg[0] == "pid":
-            reponse = "taskmasterd pid is {}\n".format(self.claudio_abbado.pid)
+            response = "taskmasterd pid is {}\n".format(self.claudio_abbado.pid)
         elif msg[0] == "shutdown":
-            response = "taskmasterd pid {} quit\n".format(self.claudio_abbado.pid)
+            response = "taskmasterd pid {} shutdown\n".format(self.claudio_abbado.pid)
             stream.send(response.encode())
-            self.quit()
+            self.quit(1,1)
         return response
+
+    def _wait_connexion(self):
+        print('attend connexion')
+        stream_client, info_client = self.socket.accept()
+        print('connexion accept')
+        return stream_client
 
     def run_server(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.bind(('', 5678))
+        try:
+            self.socket.bind(('', 5678))
+        except Exception as e:
+            print("Error: {}".format(e))
+            self.quit(1,1)
         self.socket.listen(5)
-        print('attend connexion')
-        self.stream_client, info_client = self.socket.accept()
-        print('connexion accept')
+        stream_client = self._wait_connexion()
         msg = b''
         while msg != b'quit':
-            msg = self.stream_client.recv(1024)
-            response = self._handle_cmd(msg, self.stream_client)
-            self.stream_client.send(response.encode())
-        self.stream_client.close()
+            msg = stream_client.recv(1024)
+            if msg == b'':
+                stream_client.close()
+                stream_client = self._wait_connexion()
+            response = self._handle_cmd(msg, stream_client)
+            try:
+                stream_client.send(response.encode())
+            except Exception as e:
+                print("Error: {}".format(e))
+                self.quit(1,1)
+        stream_client.close()
         self.socket.close()
 
 def main(conf_file):
     supervisord = Supervisord(conf_file)
-#    supervisord.run_supervisord()
     thread = threading.Thread(target=supervisord.run_supervisord, daemon=True)
     thread.start()
     supervisord.run_server()

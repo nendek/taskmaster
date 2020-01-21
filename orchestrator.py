@@ -327,7 +327,7 @@ class Orchestrator():
         response = ""
         for program in self.programs:
             if program.start(name):
-                reponse = "{}\tstarted\n".format(name)
+                response = "{}\tstarted\n".format(name)
                 return response
         return response
     
@@ -341,7 +341,7 @@ class Orchestrator():
         response = ""
         for program in self.programs:
             if program.kill(name):
-                reponse = "{}\tkilled\n".format(name)
+                response = "{}\tkilled\n".format(name)
                 return response
         response = "{}\tnot exist\n".format(name)
         return response
@@ -356,13 +356,13 @@ class Orchestrator():
         response = ""
         for program in self.programs:
             if program.stop(name):
-                reponse = "{}\tstopped\n".format(name)
+                response = "{}\tstopped\n".format(name)
                 return response
         response = "{}\tnot exist\n".format(name)
         return response
     
     def restart_all_proc(self):
-        reponse = ""
+        response = ""
         for program in self.programs:
             response += program.restart_all()
         return response
@@ -371,7 +371,7 @@ class Orchestrator():
         response = ""
         for program in self.programs:
             if program.restart(name):
-                reponse = "{}\trestarted\n".format(name)
+                response = "{}\trestarted\n".format(name)
                 return response
         response = "{}\tnot exist\n".format(name)
         return response
