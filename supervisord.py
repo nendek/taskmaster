@@ -34,18 +34,42 @@ class Supervisord:
         elif msg[0] == "start":
             if msg[1] == "all":
                 response = self.claudio_abbado.start_all_proc()
+            elif ":*" in msg[1]:
+                group = msg[1].split(':')
+                for prog in self.claudio_abbado.programs:
+                    if prog.name_prog == group[0]:
+                        response = prog.start_all()
+                        break
+                if response == "":
+                    response = "{}\tgroup not exist\n".format(group[0])
             else:
                 for i in range(1, len(msg)):
                     response += self.claudio_abbado.start_proc(msg[i])
         elif msg[0] == "stop":
             if msg[1] == "all":
                 response = self.claudio_abbado.stop_all_proc()
+            elif ":*" in msg[1]:
+                group = msg[1].split(':')
+                for prog in self.claudio_abbado.programs:
+                    if prog.name_prog == group[0]:
+                        response = prog.stop_all()
+                        break
+                if response == "":
+                    response = "{}\tgroup not exist\n".format(group[0])
             else:
                 for i in range(1, len(msg)):
                     response += self.claudio_abbado.stop_proc(msg[i])
         elif msg[0] == "restart":
             if msg[1] == "all":
                 response = self.claudio_abbado.restart_all_proc()
+            elif ":*" in msg[1]:
+                group = msg[1].split(':')
+                for prog in self.claudio_abbado.programs:
+                    if prog.name_prog == group[0]:
+                        response = prog.restart_all()
+                        break
+                if response == "":
+                    response = "{}\tgroup not exist\n".format(group[0])
             else:
                 for i in range(1, len(msg)):
                     response += self.claudio_abbado.restart_proc(msg[i])

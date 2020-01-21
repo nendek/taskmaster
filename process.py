@@ -33,25 +33,27 @@ class Process:
         "\tend_date: {}\n\treturn_code: {}".format(self.pid, self.status, self.start_date, self.end_date, self.return_code)
 
     def start(self, data):
-        self.nb_start += 1
-        self.max_start = data["startretries"]
-        if (self.nb_start > self.max_start):
-            self.status = "FATAL"
-            return 
-        self.start_date = datetime.now()
-        self.start_time = time.time()
-        self.end_time = None
-        self.starting_time = data["starttime"]
-        self.stopping_time = data["stoptime"]
-        pid = os.fork()
-        if pid == 0: # child
-            self._launch_process(data)
-        else:
-            self.pid = pid
-            self._create_listener()
-            self.status = "STARTING"
-            self.update_status()
-            return 
+        if self.pid == 0:
+            self.nb_start += 1
+            self.max_start = data["startretries"]
+            if (self.nb_start > self.max_start):
+                self.status = "FATAL"
+                return 
+            self.start_date = datetime.now()
+            self.start_time = time.time()
+            self.end_time = None
+            self.starting_time = data["starttime"]
+            self.stopping_time = data["stoptime"]
+            pid = os.fork()
+            if pid == 0: # child
+                self._launch_process(data)
+            else:
+                self.pid = pid
+                self._create_listener()
+                self.status = "STARTING"
+                self.update_status()
+                return
+        return
 
     def _create_listener(self):
         thread = threading.Thread(target=self._check_process_state, daemon=True)
