@@ -44,7 +44,7 @@ class Program():
             try:
                 self.fdout = os.open(self.stdout, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
             except Exception as e:
-                self.logger.warning("Error: {}".format(e)
+                self.logger.warning("Error: {}".format(e))
                 self.fdout = -1
         else:
             self.stdout = False
@@ -55,8 +55,8 @@ class Program():
             try:
                 self.fderr = os.open(self.stderr, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
             except Exception as e:
-                self.logger.warning("Error: {}".format(e)
-                self.fdout = -1
+                self.logger.warning("Error: {}".format(e))
+                self.fderr = -1
         else:
             self.stderr = False
             self.fderr = -1

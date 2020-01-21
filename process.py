@@ -110,11 +110,10 @@ class Process:
                 os.dup2(data["fdout"], sys.stdout.fileno())
             if data["fderr"] > 0:
                 os.dup2(data["fderr"], sys.stderr.fileno())
-        except:
-            except OSError as e:
-                self.logger.error("cant dup2: {}".format(e))
-            except Exception as e:
-                self.logger.error("cant dup2: {}".format(e))
+        except OSError as e:
+            self.logger.error("cant dup2: {}".format(e))
+        except Exception as e:
+            self.logger.error("cant dup2: {}".format(e))
         if data["working_dir"] != '.':
             try:
                 os.chdir(data["working_dir"])
