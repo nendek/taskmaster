@@ -6,24 +6,27 @@ import sys
 from program import Program
 
 class Orchestrator():
-    def __init__(self, config_file_name):
+    def __init__(self, config_file_name, logger):
+        self.logger = logger
         self.pid = os.getpid()
         self.path = os.path.join(os.path.abspath(os.path.dirname(config_file_name)), config_file_name)
         self.configs = {}
         self.configs = self._get_configs()
         self.programs = self.start()
         signal.signal(signal.SIGHUP, self.reload_conf)
+        self.logger.info("taskmasterd well started")
 
     def start(self):
         progs = []
         for elem in self.configs["programs"]:
-            progs.append(Program(self.configs["programs"][elem], elem))
+            progs.append(Program(self.configs["programs"][elem], elem, self.logger))
         return progs
     
     def quit(self):
         for prog in self.programs:
             prog.quit()
             del prog
+        self.logger.info("supervisord shutdown")
 
     def update_processes(self):
         """
@@ -46,6 +49,7 @@ class Orchestrator():
     def show_processes(self):
         string = ""
         self.update_processes()
+        self.logger.info("status request received")
         for program in self.programs:
             for proc in program.process:
                 if proc.pid != 0:
@@ -70,6 +74,7 @@ class Orchestrator():
                 data = yaml.safe_load(f)
                 self._parsing_yaml(data)
             except yaml.YAMLError as e:
+                self.logger.warning("Error: YAML file format error {}".format(e))
                 print("YAML file format error:")
                 print(e)
         return data
@@ -154,38 +159,54 @@ class Orchestrator():
                         raise NameError("BAD_EX")
         except NameError as e:
             if e.__str__() == "NO_CMD":
+                self.logger.warning("Error: No cmd in config file")
                 print("Error: No cmd in config file")
             elif e.__str__() == "NO_PROG":
+                self.logger.warning("Error: No programs in config file")
                 print("Error: No programs in config file")
             elif e.__str__() == "BAD_NP":
+                self.logger.warning("Error: numprocs invalid type, use int type")
                 print("Error: numprocs invalid type, use int type")
             elif e.__str__() == "BAD_UM":
+                self.logger.warning("Error: umask invalid type, use int type")
                 print("Error: umask invalid type, use int type")
             elif e.__str__() == "BAD_WD":
+                self.logger.warning("Error: workdir is invalid, use str type or file exist")
                 print("Error: workdir is invalid, use str type or file exist")
             elif e.__str__() == "BAD_AS":
+                self.logger.warning("Error: autostart is invalid, use bool type")
                 print("Error: autostart is invalid, use bool type")
             elif e.__str__() == "BAD_AR":
+                self.logger.warning("Error: autorestart is invalid, use bool type or unexpected")
                 print("Error: autorestart is invalid, use bool type or unexpected")
             elif e.__str__() == "BAD_SR":
+                self.logger.warning("Error: startretries is invalid, use int type")
                 print("Error: startretries is invalid, use int type")
             elif e.__str__() == "BAD_ST":
+                self.logger.warning("Error: starttime is invalid, use int type")
                 print("Error: starttime is invalid, use int type")
             elif e.__str__() == "BAD_SS":
+                self.logger.warning("Error: stropsignal is invalid, use str type")
                 print("Error: stropsignal is invalid, use str type")
             elif e.__str__() == "BAD_STT":
+                self.logger.warning("Error: stoptime is invalid, use int type")
                 print("Error: stoptime is invalid, use int type")
             elif e.__str__() == "BAD_STDOUT":
+                self.logger.warning("Error: stdout is invalid, use str type or file exist")
                 print("Error: stdout is invalid, use str type or file exist")
             elif e.__str__() == "BAD_STDERR":
+                self.logger.warning("Error: stderr is invalid, use str type or file exist")
                 print("Error: stderr is invalid, use str type or file exist")
             elif e.__str__() == "BAD_EX":
+                self.logger.warning("Error: exitcodes is invalid, use int type")
                 print("Error: exitcodes is invalid, use int type")
             else:
+                print("Error: {}".format(e))
                 print(e)
             sys.exit(-1)
         except Exception as e:
-            print("Error: {}".format(e))
+            print(e)
+            self.logger.warning("Error: {}".format(e))
             sys.exit(0)
 
     def _clean_config(self, data):
@@ -295,6 +316,7 @@ class Orchestrator():
         return
 
     def reload_conf(self, signum, stack):
+        self.logger.info("loading config file")
         new_configs = self._get_configs()
         for prog in self.programs:
             if prog.name_prog not in new_configs["programs"]:
@@ -315,18 +337,21 @@ class Orchestrator():
             else:
                 self._refresh_conf_prog(prog, new_configs["programs"][prog])
         self.configs = new_configs
+        self.logger.info("config file well loaded")
         return
 
     def _same_configs(self, dic1, dic2):
         return True
 
     def start_all_proc(self):
+        self.logger.info("start all request received")
         response = ""
         for program in self.programs:
             response += program.start_all()
         return response
 
     def start_proc(self, name):
+        self.logger.info("start {} request received".format(name))
         response = ""
         for program in self.programs:
             if program.start(name):
@@ -336,12 +361,14 @@ class Orchestrator():
         return response
     
     def kill_all_proc(self):
+        self.logger.info("kill all request received")
         response = ""
         for program in self.programs:
             response += program.kill_all()
         return response
 
     def kill_proc(self, name):
+        self.logger.info("kill {} request received".format(name))
         response = ""
         for program in self.programs:
             if program.kill(name):
@@ -351,12 +378,14 @@ class Orchestrator():
         return response
     
     def stop_all_proc(self):
+        self.logger.info("stop all request received")
         response = ""
         for program in self.programs:
             response += program.stop_all()
         return response
 
     def stop_proc(self, name):
+        self.logger.info("stop {} request received".format(name))
         response = ""
         for program in self.programs:
             if program.stop(name):
@@ -366,12 +395,14 @@ class Orchestrator():
         return response
     
     def restart_all_proc(self):
+        self.logger.info("restart all request received")
         response = ""
         for program in self.programs:
             response += program.restart_all()
         return response
 
     def restart_proc(self, name):
+        self.logger.info("restart {} request received".format(name))
         response = ""
         for program in self.programs:
             if program.restart(name):

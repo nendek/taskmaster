@@ -6,7 +6,8 @@ import sys
 import signal
 
 class Process:
-    def __init__(self, name):
+    def __init__(self, name, logger):
+        self.logger = logger
         self.name_proc = name
         self.pid = 0
         self.status = "STOPPED"
@@ -42,7 +43,9 @@ class Process:
                 self._launch_process(data)
             else:
                 self.pid = pid
+                self.logger.info("process {} started".format(self.name_proc))
                 self._create_listener()
+                self.logger.info("process {} is now in STARTING state".format(self.name_proc))
                 self.status = "STARTING"
                 self.update_status()
                 return
@@ -63,7 +66,7 @@ class Process:
             self.return_code = os.WEXITSTATUS(status[1])
             self.pid = 0
         except Exception as e:
-            print(e)
+            self.logger.error(e)
         finally:
             return
         return
@@ -76,6 +79,7 @@ class Process:
             if self.status == "STARTING":
                 if now > self.start_time + self.starting_time:
                     self.status = "RUNNING"
+                    self.logger.info("process {} is now in RUNNING state".format(self.name_proc))
                     self.nb_start = 0
             if self.status == "STOPPING":
                 if now > self.stop_time + self.stopping_time:
@@ -84,12 +88,16 @@ class Process:
             if self.status == "STARTING":
                 if self.end_time < self.start_time + self.starting_time:
                     self.status = "BACKOFF"
+                    self.logger.info("process {} is now in BACKOFF state".format(self.name_proc))
                 else:
                     self.status = "EXITED"
+                    self.logger.info("process {} is now in EXITED state".format(self.name_proc))
             if self.status == "RUNNING":
                 self.status = "EXITED"
+                self.logger.info("process {} is now in EXITED state".format(self.name_proc))
             if self.status == "STOPPING":
                 self.status = "STOPPED"
+                self.logger.info("process {} is now in STOPPED state".format(self.name_proc))
 
 
     def _launch_process(self, data):
@@ -101,14 +109,14 @@ class Process:
             try:
                 os.chdir(data["working_dir"])
             except OSError as e:
-                print("cant chdir: {}".format(e))
+                self.logger.error("cant chdir: {}".format(e))
         try:
             if type(data["umask"]) == str:
                 os.umask(int(data["umask"], 8))
             else:
                 os.umask(data["umask"])
         except OSError as e:
-            print("cant umask: {}".format(e))
+            self.logger.error("cant umask: {}".format(e))
         os.execve(data["cmd"], data["args"], data["env"])
         sys.exit()
     
@@ -123,9 +131,10 @@ class Process:
         try:
             if self.pid != 0:
                 os.kill(self.pid, signal)
-                self.status = "STOPPED"
+                self.status = "STOPPING"
+                self.logger.info("process {} is now in STOPPING state".format(self.name_proc))
         except Exception as e:
-            print(e)
+            self.logger.error(e)
             return -1
         else:
             return 0

@@ -51,12 +51,25 @@ class Taskmasterclt():
     def send_and_recv_cmd(self, cmd, arg):
         msg = "{} {}".format(cmd, arg)
         msg = msg.encode()
-        self.stream_serv.send(msg)
-        msg = self.stream_serv.recv(1024)
+        try:
+            self.stream_serv.send(msg)
+        except Exception as e:
+            print(f"{bcolors.ERR}", end='')
+            print("Error: {}".format(e))
+            print(f"{bcolors.ENDC}", end='')
+            sys.exit(0)
+        cmd = b''
+        if cmd != "shutdown":
+            try:
+                msg = self.stream_serv.recv(1024)
+            except Exception as e:
+                print(f"{bcolors.ERR}", end='')
+                print("Error: {}".format(e))
+                print(f"{bcolors.ENDC}", end='')
+                sys.exit(0)
         if msg == b'':
-            print(f"{bcolors.ERR}taskmasterd not running{bcolors.ENDC}")
-            self.stream_serv.close()
-            return
+            print(f"{bcolors.ERR}Taskmasterd not running{bcolors.ENDC}")
+            self.quit(None, None)
         print(f"{bcolors.ENDC}", end='')
         print(msg.decode())
     
@@ -79,6 +92,7 @@ class Taskmasterclt():
     
     def quit(self, cmd, args):
         print(f"{bcolors.GB}{bcolors.BOLD}Goodbye Bro...{bcolors.ENDC}")
+        self.stream_serv.close()
         sys.exit(0)
     
     def print_help(cmd, args):

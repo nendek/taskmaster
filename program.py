@@ -2,8 +2,9 @@ from process import Process
 import os
 import signal
 
-class Program:
-    def __init__(self, config, name):
+class Program():
+    def __init__(self, config, name, logger):
+        self.logger = logger
         self.name_prog = name
         self.process = []
         self.data = {}
@@ -20,9 +21,9 @@ class Program:
         self.process = []
         for i in range(0, self.numprocs):
             if self.numprocs <= 1:
-                self.process.append(Process(self.name_prog))
+                self.process.append(Process(self.name_prog, self.logger))
             else:
-                self.process.append(Process("{}:{}".format(self.name_prog, i)))
+                self.process.append(Process("{}:{}".format(self.name_prog, i), self.logger))
             if self.autostart == True:
                 self.process[i].start(self.data)
 
