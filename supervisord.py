@@ -95,7 +95,7 @@ class Supervisord:
             self.claudio_abbado.reload_conf(1, 1)
             response = "configuration reloaded"
         elif msg[0] == "pid":
-            response = "taskmasterd pid is {}\n".format(self.claudio_abbado.pid)
+            response = "taskmasterd pid is {}\n".format(os.getpid())
         elif msg[0] == "shutdown":
             self.quit(1,1)
         response = response[:-1]
@@ -134,9 +134,18 @@ class Supervisord:
 
 def main(conf_file):
     supervisord = Supervisord(conf_file)
-    thread = threading.Thread(target=supervisord.run_supervisord, daemon=True)
-    thread.start()
-    supervisord.run_server()
+    try:
+        pid = os.fork()
+    except Exception as e:
+        print("Error fork: {}".format(e))
+        return
+    if pid == 0:
+        supervisord.claudio_abbado.start()
+        thread = threading.Thread(target=supervisord.run_supervisord, daemon=True)
+        thread.start()
+        supervisord.run_server()
+    else:
+        return
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

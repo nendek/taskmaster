@@ -38,7 +38,11 @@ class Process:
             self.end_time = 0
             self.starting_time = data["starttime"]
             self.stopping_time = data["stoptime"]
-            pid = os.fork()
+            try:
+                pid = os.fork()
+            except Exception as e:
+                self.logger.warning("Error fork: {}".format(e))
+                return
             if pid == 0: # child
                 self._launch_process(data)
             else:

@@ -8,19 +8,19 @@ from program import Program
 class Orchestrator():
     def __init__(self, config_file_name, logger):
         self.logger = logger
-        self.pid = os.getpid()
         self.path = os.path.join(os.path.abspath(os.path.dirname(config_file_name)), config_file_name)
         self.configs = {}
         self.configs = self._get_configs()
-        self.programs = self.start()
+        self.programs = []
         signal.signal(signal.SIGHUP, self.reload_conf)
-        self.logger.info("taskmasterd well started")
 
     def start(self):
         progs = []
         for elem in self.configs["programs"]:
             progs.append(Program(self.configs["programs"][elem], elem, self.logger))
-        return progs
+        self.programs = progs
+        self.logger.info("taskmasterd well started")
+        return
     
     def quit(self):
         for prog in self.programs:
