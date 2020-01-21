@@ -11,10 +11,10 @@ class Program:
         self._load_config(config)
         self._launch_process()
 
-    def __del__(self):
+    def quit(self):
         for process in self.process:
+            process.quit()
             del process
-        print("all {} processes deleted".format(self.name_prog))
 
     def _launch_process(self):
         self.process = []

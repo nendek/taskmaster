@@ -10,11 +10,6 @@ error_name_missing = "Error: {0} requires a process name\n\
 
 class Taskmasterclt():
     def __init__(self):
-#        self.error_name_missing = "Error: {0} requires a process name\n\
-#        {0} <name>\t\t{0} a process\n\
-#        {0} <gname>:*  \t{0} all process in a group\n\
-#        {0} <name> <name>\t{0} multiple processes or groups\n\
-#        {0} all\t\t{0} all processes"
         self.dic_command = {
         "status" : self.one_arg,
         "start" : self.multiple_arg,

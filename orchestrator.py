@@ -20,10 +20,10 @@ class Orchestrator():
             progs.append(Program(self.configs["programs"][elem], elem))
         return progs
     
-    def __del__(self):
+    def quit(self):
         for prog in self.programs:
+            prog.quit()
             del prog
-        print("all programes deleted")
 
     def update_processes(self):
         """

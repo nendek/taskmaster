@@ -16,6 +16,7 @@ class Supervisord:
         signal.signal(signal.SIGQUIT, self.quit)
 
     def quit(self, sig, frame):
+        self.claudio_abbado.quit()
         del self.claudio_abbado
         sys.exit(0)
 

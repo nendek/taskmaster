@@ -23,10 +23,6 @@ class Process:
         self.end_date = None
         self.end_time = None
         self.return_code = None
-
-    def __del__(self):
-        self.kill()
-        print("process {} killed".format(self.name_proc))
     
     def __str__(self):
         return "Process\n\tpid: {}\n\tstatus: {}\n\tstart_date: {}\n"\
@@ -55,6 +51,9 @@ class Process:
                 return
         return
 
+    def quit(self):
+        self.kill()
+    
     def _create_listener(self):
         thread = threading.Thread(target=self._check_process_state, daemon=True)
         thread.start()
