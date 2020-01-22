@@ -43,11 +43,13 @@ class Taskmasterclt():
     def create_connection(self):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5)
             sock.connect((self.host, self.port))
         except Exception as e:
             print(f"{bcolors.ERR}", end='')
             print("Error: {}".format(e))
             print(f"{bcolors.ENDC}", end='')
+            print(f"{bcolors.GB}{bcolors.BOLD}Goodbye Bro...{bcolors.ENDC}")
             sys.exit(0)
         self.stream_serv = sock
         return
@@ -61,7 +63,7 @@ class Taskmasterclt():
             print(f"{bcolors.ERR}", end='')
             print("Error: {}".format(e))
             print(f"{bcolors.ENDC}", end='')
-            sys.exit(0)
+            self.quit(None, None)
         cmd = b''
         if cmd != "shutdown":
             try:
@@ -70,7 +72,7 @@ class Taskmasterclt():
                 print(f"{bcolors.ERR}", end='')
                 print("Error: {}".format(e))
                 print(f"{bcolors.ENDC}", end='')
-                sys.exit(0)
+                self.quit(None, None)
         if msg == b'':
             print(f"{bcolors.ERR}Taskmasterd not running{bcolors.ENDC}")
             self.quit(None, None)

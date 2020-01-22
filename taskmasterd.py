@@ -46,7 +46,7 @@ class Supervisord:
         msg = msg.decode()
         msg = msg.split()
         if len(msg) == 0:
-            return "empty msg\n"
+            return "empty msg"
         if msg[0] == "status":
             response = self.claudio_abbado.show_processes()
         elif msg[0] == "start":
@@ -59,7 +59,7 @@ class Supervisord:
                         response = prog.start_all()
                         break
                 if response == "":
-                    response = "{:30} group not exist\n".format(group[0])
+                    response = "{:30} group not exist".format(group[0])
             else:
                 for i in range(1, len(msg)):
                     response += self.claudio_abbado.start_proc(msg[i])
@@ -73,7 +73,7 @@ class Supervisord:
                         response = prog.stop_all()
                         break
                 if response == "":
-                    response = "{:30} group not exist\n".format(group[0])
+                    response = "{:30} group not exist".format(group[0])
             else:
                 for i in range(1, len(msg)):
                     response += self.claudio_abbado.stop_proc(msg[i])
@@ -87,7 +87,7 @@ class Supervisord:
                         response = prog.restart_all()
                         break
                 if response == "":
-                    response = "{:30}\tgroup not exist\n".format(group[0])
+                    response = "{:30}\tgroup not exist".format(group[0])
             else:
                 for i in range(1, len(msg)):
                     response += self.claudio_abbado.restart_proc(msg[i])
@@ -95,10 +95,9 @@ class Supervisord:
             self.claudio_abbado.reload_conf(1, 1)
             response = "configuration reloaded"
         elif msg[0] == "pid":
-            response = "taskmasterd pid is {}\n".format(os.getpid())
+            response = "taskmasterd pid is {}".format(os.getpid())
         elif msg[0] == "shutdown":
             self.quit(1,1)
-        response = response[:-1]
         return response
 
     def _wait_connexion(self):
@@ -114,7 +113,7 @@ class Supervisord:
         except Exception as e:
             self.logger.error("Error: {}".format(e))
             self.quit(1,1)
-        self.socket.listen(5)
+        self.socket.listen(0)
         self.stream_client = self._wait_connexion()
         msg = b''
         while msg != b'quit':
@@ -123,6 +122,7 @@ class Supervisord:
                 self.stream_client.close()
                 self.logger.info("client disconnected")
                 self.stream_client = self._wait_connexion()
+                continue
             response = self._handle_cmd(msg, self.stream_client)
             try:
                 self.stream_client.send(response.encode())
