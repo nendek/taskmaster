@@ -10,7 +10,7 @@ class Orchestrator():
         self.logger = logger
         self.programs = []
         self.configs = configs
-        signal.signal(signal.SIGHUP, self.reload_conf)
+#        signal.signal(signal.SIGHUP, self.reload_conf)
 
     def start(self):
         progs = []
@@ -73,9 +73,8 @@ class Orchestrator():
                 return
         return
 
-    def reload_conf(self, signum, stack):
+    def reload_conf(self, new_configs):
         self.logger.info("loading config file")
-        new_configs = self._get_configs()
         for prog in self.programs:
             if prog.name_prog not in new_configs["programs"]:
                 del prog
@@ -90,7 +89,7 @@ class Orchestrator():
                 self._reload_prog(prog, new_configs["programs"][prog])
             elif self.configs["programs"][prog]["stderr"] !=  new_configs["programs"][prog]["stderr"]:
                 self._reload_prog(prog, new_configs["programs"][prog])
-            elif self.configs["programs"][prog]["var_env"] !=  new_configs["programs"][prog]["var_env"]:
+            elif self.configs["programs"][prog]["env"] !=  new_configs["programs"][prog]["env"]:
                 self._reload_prog(prog, new_configs["programs"][prog])
             elif self.configs["programs"][prog]["autostart"] !=  new_configs["programs"][prog]["autostart"]:
                 self._reload_prog(prog, new_configs["programs"][prog])
@@ -102,7 +101,6 @@ class Orchestrator():
                 self._reload_prog(prog, new_configs["programs"][prog])
             elif self.configs["programs"][prog]["starttime"] !=  new_configs["programs"][prog]["starttime"]:
                 self._reload_prog(prog, new_configs["programs"][prog])
-
             else:
                 self._refresh_conf_prog(prog, new_configs["programs"][prog])
         self.configs = new_configs

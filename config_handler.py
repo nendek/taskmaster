@@ -80,14 +80,3 @@ class Config_parser():
         if val == signal.SIGUSR2.name:
             return signal.SIGUSR2
         raise ParsingError("Error in type of {} for program {}".format(key, name))
-
-        
-                
-
-parser = Config_parser("test.yaml")
-    
-try:
-    parser.parse_config()
-#    print(parser.configs)
-except ParsingError as e:
-    print(e)

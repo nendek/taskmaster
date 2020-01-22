@@ -61,7 +61,7 @@ class Program():
             self.stderr = False
             self.fderr = -1
         self.exitcodes = config["exitcodes"]
-        self.var_env = config["var_env"].copy()
+        self.var_env = config["env"].copy()
         self.bin, self.args = self.parse_cmd()
         self._update_data()
         

@@ -110,28 +110,13 @@ class Process:
                 os.dup2(data["fdout"], sys.stdout.fileno())
             if data["fderr"] > 0:
                 os.dup2(data["fderr"], sys.stderr.fileno())
-        except OSError as e:
-            self.logger.error("cant dup2: {}".format(e))
-        except Exception as e:
-            self.logger.error("cant dup2: {}".format(e))
-        if data["working_dir"] != '.':
-            try:
+            if data["working_dir"] != '.':
                 os.chdir(data["working_dir"])
-            except OSError as e:
-                self.logger.error("cant chdir: {}".format(e))
-            except Exception as e:
-                self.logger.error("cant chdir: {}".format(e))
-        try:
             if type(data["umask"]) == str:
                 os.umask(int(data["umask"], 8))
             else:
                 os.umask(data["umask"])
-        except OSError as e:
-            self.logger.error("cant umask: {}".format(e))
-        try:
             os.execve(data["cmd"], data["args"], data["env"])
-        except OSError as e:
-            self.logger.error("cant execve: {}".format(e))
         except Exception as e:
             self.logger.error("cant execve: {}".format(e))
         sys.exit()
@@ -148,8 +133,10 @@ class Process:
             if self.pid != 0:
                 os.kill(self.pid, signal)
                 self.status = "STOPPING"
+                self.nb_start = 0
                 self.logger.info("process {} is now in STOPPING state".format(self.name_proc))
         except Exception as e:
+            self.logger.debug(pid)
             self.logger.error(e)
             return -1
         else:

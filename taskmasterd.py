@@ -4,6 +4,7 @@ import argparse
 import signal
 from process import Process
 from orchestrator import Orchestrator
+from config_handler import Config_parser, ParsingError
 import threading
 import socket
 import logging
@@ -12,12 +13,29 @@ from logging.handlers import RotatingFileHandler
 class Supervisord:
     def __init__(self, conf_file):
         self.init_logger()
-        self.claudio_abbado = Orchestrator(conf_file, self.logger)
+        try:
+            self.config_parser = Config_parser(conf_file)
+            self.config_parser.parse_config()
+        except ParsingError as e:
+            self.logger.Error(e.__str__())
+            print(e)
+            sys.exit()
+        self.claudio_abbado = Orchestrator(self.config_parser.configs, self.logger)
         self.socket = None
         self.stream_client = None
         signal.signal(signal.SIGTERM, self.quit)
         signal.signal(signal.SIGINT, self.quit)
         signal.signal(signal.SIGQUIT, self.quit)
+        signal.signal(signal.SIGHUP, self.reload_conf)
+        self.dic_fcts = {
+            "status": self.status,
+            "start": self.multiple_arg,
+            "stop": self.multiple_arg,
+            "restart": self.multiple_arg,
+            "update": self.update,
+            "pid": self.pid,
+            "shutdown": self.shutdown
+        }
 
     def init_logger(self):
         self.logger = logging.getLogger()
@@ -28,7 +46,7 @@ class Supervisord:
         file_handler.setFormatter(formatter)
         self.logger.addHandler(file_handler)
 
-    def quit(self, sig, frame):
+    def quit(self, sig="shutdown", frame=None):
         self.logger.warning("taskmasterd received signal {}".format(sig))
         self.claudio_abbado.quit()
         if self.stream_client != None:
@@ -40,6 +58,33 @@ class Supervisord:
     def run_supervisord(self):
         while (1):
             self.claudio_abbado.update_processes()
+
+    def status(self):
+        response = self.claudio_abbado.show_processes()
+        return response
+
+    def update(self):
+        reponse = self.reload_conf(0, 0)
+        return "configuration reloaded"
+    
+    def pid(self):
+        return "taskmasterd pid is {}".format(os.getpid())
+    
+    def shutdown(self):
+        self.quit()
+
+    def multiple_arg(self, msg):
+        if msg[0] == "start":
+            fct = claudio_abbado.start_proc()
+        elif msg[0] == "stop":
+            fct = claudio_abbado.stop_proc()
+        elif msg[0] == "restart":
+            fct == claudio_abbado.restart_proc()
+
+        if msg[1] == "all":
+            for program in self.claudio_abbado.programs:
+                for process in program.process:
+                    process.start(process.data)
 
     def _handle_cmd(self, msg, stream):
         response = ""
@@ -92,14 +137,23 @@ class Supervisord:
                 for i in range(1, len(msg)):
                     response += self.claudio_abbado.restart_proc(msg[i])
         elif msg[0] == "update":
-            self.claudio_abbado.reload_conf(1, 1)
+            self.reload_conf(0, 0)
             response = "configuration reloaded"
         elif msg[0] == "pid":
             response = "taskmasterd pid is {}".format(os.getpid())
         elif msg[0] == "shutdown":
-            self.quit(1,1)
+            self.shutdown()
         return response
 
+    def reload_conf(self, sig, stack):
+        try:
+            self.config_parser.parse_config()
+            self.claudio_abbado.reload_conf(self.config_parser.configs)
+        except ParsingError as e:
+            self.logger.error(e.__str__())
+            self.stream_client.send("Error reloading_config")
+            self.quit()
+        
     def _wait_connexion(self):
         self.logger.info('daemon waiting for client')
         self.stream_client, info_client = self.socket.accept()
@@ -108,11 +162,12 @@ class Supervisord:
 
     def run_server(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             self.socket.bind(('', 5678))
         except Exception as e:
             self.logger.error("Error: {}".format(e))
-            self.quit(1,1)
+            self.quit()
         self.socket.listen(0)
         self.stream_client = self._wait_connexion()
         msg = b''
@@ -128,7 +183,7 @@ class Supervisord:
                 self.stream_client.send(response.encode())
             except Exception as e:
                 self.logger.error("Error: {}".format(e))
-                self.quit(1,1)
+                self.quit()
         self.stream_client.close()
         self.socket.close()
 

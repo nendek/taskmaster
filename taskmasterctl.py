@@ -20,16 +20,16 @@ class bcolors:
 class Taskmasterclt():
     def __init__(self):
         self.dic_command = {
-        "status" : self.one_arg,
-        "start" : self.multiple_arg,
-        "stop" : self.multiple_arg,
-        "restart" : self.multiple_arg,
-        "update" : self.one_arg,
-        "reload" : self.null, # restart the supervisord
-        "pid" : self.one_arg, # get the pid of supervisord
-        "quit" : self.quit,
-        "shutdown" : self.one_arg,
-        "help" : self.print_help
+            "status" : self.one_arg,
+            "start" : self.multiple_arg,
+            "stop" : self.multiple_arg,
+            "restart" : self.multiple_arg,
+            "update" : self.one_arg,
+            "reload" : self.null, # restart the supervisord
+            "pid" : self.one_arg, # get the pid of supervisord
+            "quit" : self.quit,
+            "shutdown" : self.one_arg,
+            "help" : self.print_help
         }
         self.host = 'localhost'
         self.port = 5678
@@ -39,6 +39,10 @@ class Taskmasterclt():
         signal.signal(signal.SIGTERM, self.quit)
         signal.signal(signal.SIGINT, self.quit)
         signal.signal(signal.SIGQUIT, self.quit)
+        signal.signal(signal.SIGTSTP, signal.SIG_IGN)
+
+    def ignore(self, sig, stack):
+        pass
 
     def create_connection(self):
         try:
@@ -130,5 +134,8 @@ readline.set_completer(completion)
 readline.parse_and_bind('tab: complete')
 
 while True:
-    cmd = input(f"{bcolors.FIRST}{bcolors.BOLD}taskmaster> {bcolors.ENDC}{bcolors.CMD}")
-    ctl.handle_cmd(cmd)
+    try:
+        cmd = input(f"{bcolors.FIRST}{bcolors.BOLD}taskmaster> {bcolors.ENDC}{bcolors.CMD}")
+        ctl.handle_cmd(cmd)
+    except EOFError as e:
+        ctl.quit(None, None)
