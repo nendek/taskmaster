@@ -151,7 +151,6 @@ class Supervisord:
             self.claudio_abbado.reload_conf(self.config_parser.configs)
         except ParsingError as e:
             self.logger.error(e.__str__())
-            self.stream_client.send("Error reloading_config")
             self.quit()
         
     def _wait_connexion(self):

@@ -112,10 +112,7 @@ class Process:
                 os.dup2(data["fderr"], sys.stderr.fileno())
             if data["working_dir"] != '.':
                 os.chdir(data["working_dir"])
-            if type(data["umask"]) == str:
-                os.umask(int(data["umask"], 8))
-            else:
-                os.umask(data["umask"])
+            os.umask(data["umask"])
             os.execve(data["cmd"], data["args"], data["env"])
         except Exception as e:
             self.logger.error("cant execve: {}".format(e))
