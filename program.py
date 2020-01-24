@@ -2,8 +2,9 @@ from process import Process
 import os
 import signal
 
-class Program:
-    def __init__(self, config, name):
+class Program():
+    def __init__(self, config, name, logger):
+        self.logger = logger
         self.name_prog = name
         self.process = []
         self.data = {}
@@ -11,18 +12,18 @@ class Program:
         self._load_config(config)
         self._launch_process()
 
-    def __del__(self):
+    def quit(self):
         for process in self.process:
+            process.quit()
             del process
-        print("all {} processes deleted".format(self.name_prog))
 
     def _launch_process(self):
         self.process = []
         for i in range(0, self.numprocs):
             if self.numprocs <= 1:
-                self.process.append(Process(self.name_prog))
+                self.process.append(Process(self.name_prog, self.logger))
             else:
-                self.process.append(Process("{}:{}".format(self.name_prog, i)))
+                self.process.append(Process("{}:{}".format(self.name_prog, i), self.logger))
             if self.autostart == True:
                 self.process[i].start(self.data)
 
@@ -40,8 +41,10 @@ class Program:
 
         if config["stdout"] != False:
             self.stdout = config["stdout"]
-            self.fdout = os.open(self.stdout, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
-            if self.fdout < 0:
+            try:
+                self.fdout = os.open(self.stdout, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
+            except Exception as e:
+                self.logger.warning("Error: {}".format(e))
                 self.fdout = -1
         else:
             self.stdout = False
@@ -49,15 +52,16 @@ class Program:
 
         if config["stderr"] != False:
             self.stderr = config["stderr"]
-            self.fderr = os.open(self.stderr, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
-            if self.fderr < 0:
+            try:
+                self.fderr = os.open(self.stderr, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
+            except Exception as e:
+                self.logger.warning("Error: {}".format(e))
                 self.fderr = -1
         else:
             self.stderr = False
             self.fderr = -1
         self.exitcodes = config["exitcodes"]
-        self.var_env = config["var_env"].copy()
-
+        self.var_env = config["env"].copy()
         self.bin, self.args = self.parse_cmd()
         self._update_data()
         
@@ -98,9 +102,11 @@ class Program:
         return
     
     def kill_all(self):
+        response = ""
         for process in self.process:
+            response += "{:30} killed\n".format(process.name_proc)
             process.kill()
-        return
+        return response
     
     def kill(self, name):
         for process in self.process:
@@ -110,9 +116,11 @@ class Program:
         return 0
 
     def stop_all(self):
+        response = ""
         for process in self.process:
+            response += "{:30} stopped\n".format(process.name_proc)
             process.stop(self.stopsignal)
-        return
+        return response
 
     def stop(self, name):
         for process in self.process:
@@ -122,9 +130,11 @@ class Program:
         return 0
     
     def start_all(self):
+        response = ""
         for process in self.process:
+            response += "{:30} started\n".format(process.name_proc)
             process.start(self.data)
-        return
+        return response
 
     def start(self, name):
         for process in self.process:
@@ -134,9 +144,11 @@ class Program:
         return 0
     
     def restart_all(self):
+        response = ""
         for process in self.process:
+            response += "{:30} restarted\n".format(process.name_proc)
             process.restart(self.data)
-        return
+        return response
 
     def restart(self, name):
         for process in self.process:
@@ -150,5 +162,6 @@ class Program:
 
     def reload(self, config):
         self._load_config(config)
+        self.kill_all()
         del self.process
         self._launch_process()
