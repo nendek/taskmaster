@@ -75,11 +75,17 @@ class Orchestrator():
 
     def reload_conf(self, new_configs):
         self.logger.info("loading config file")
-        for prog in self.programs:
-            if prog.name_prog not in new_configs["programs"]:
-                del prog
+        for name_prog in new_configs["programs"]:
+            if name_prog not in self.configs["programs"]:
+                self.programs.append(Program(new_configs["programs"][name_prog], name_prog, self.logger))
+        prog_to_del = []
         for prog in self.configs["programs"]:
-            if self.configs["programs"][prog]["numprocs"] !=  new_configs["programs"][prog]["numprocs"]:
+            if prog not in new_configs["programs"]:
+                for program in self.programs:
+                    if program.name_prog == prog:
+                        program.quit()
+                        prog_to_del.append(program)
+            elif self.configs["programs"][prog]["numprocs"] !=  new_configs["programs"][prog]["numprocs"]:
                 self._reload_prog(prog, new_configs["programs"][prog])
             elif self.configs["programs"][prog]["umask"] !=  new_configs["programs"][prog]["umask"]:
                 self._reload_prog(prog, new_configs["programs"][prog])
@@ -103,6 +109,8 @@ class Orchestrator():
                 self._reload_prog(prog, new_configs["programs"][prog])
             else:
                 self._refresh_conf_prog(prog, new_configs["programs"][prog])
+        for elem in prog_to_del:
+            del self.programs[self.programs.index(elem)]
         self.configs = new_configs
         self.logger.info("config file well loaded")
         return

@@ -25,7 +25,6 @@ class Taskmasterclt():
             "stop" : self.multiple_arg,
             "restart" : self.multiple_arg,
             "update" : self.one_arg,
-            "reload" : self.null, # restart the supervisord
             "pid" : self.one_arg, # get the pid of supervisord
             "quit" : self.quit,
             "shutdown" : self.one_arg,
@@ -40,9 +39,6 @@ class Taskmasterclt():
         signal.signal(signal.SIGINT, self.quit)
         signal.signal(signal.SIGQUIT, self.quit)
         signal.signal(signal.SIGTSTP, signal.SIG_IGN)
-
-    def ignore(self, sig, stack):
-        pass
 
     def create_connection(self):
         try:
@@ -121,7 +117,7 @@ class Taskmasterclt():
 
 
 print(f"{bcolors.GB}{bcolors.BOLD}Hello Bro !{bcolors.ENDC}")
-cmds = ["status", "start", "stop", "restart", "update", "reload", "pid", "quit", "shutdown", "help"]
+cmds = ["status", "start", "stop", "restart", "update", "pid", "quit", "shutdown", "help"]
 
 def completion(text, state):
     matches = [s for s in cmds if s and s.startswith(text)]
