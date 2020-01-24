@@ -134,9 +134,9 @@ class Process:
     def _send_signal(self, signal): # put nb_start to 0
         try:
             if self.pid != 0:
+                self.nb_start = 0
                 os.kill(self.pid, signal)
                 self.status = "STOPPING"
-                self.nb_start = 0
                 self.logger.info("process {} is now in STOPPING state".format(self.name_proc))
         except Exception as e:
             self.logger.debug(self.pid)

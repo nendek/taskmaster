@@ -17,7 +17,7 @@ class Supervisord:
             self.config_parser = Config_parser(conf_file)
             self.config_parser.parse_config()
         except ParsingError as e:
-            self.logger.Error(e.__str__())
+            self.logger.error(e.__str__())
             print(e)
             sys.exit()
         self.claudio_abbado = Orchestrator(self.config_parser.configs, self.logger)
