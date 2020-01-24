@@ -194,10 +194,30 @@ def main(conf_file):
         print("Error fork: {}".format(e))
         return
     if pid == 0:
-        supervisord.claudio_abbado.start()
-        thread = threading.Thread(target=supervisord.run_supervisord, daemon=True)
-        thread.start()
-        supervisord.run_server()
+        signal.signal(signal.SIGQUIT, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGTSTP, signal.SIG_IGN)
+        signal.signal(signal.SIGCONT, signal.SIG_IGN)
+        signal.signal(signal.SIGTTIN, signal.SIG_IGN)
+        signal.signal(signal.SIGTTOU, signal.SIG_IGN)
+        signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+        try:
+            os.setsid()
+        except Exception as e:
+            print("Error setsid: {}".format(e))
+            return
+        try:
+            pid = os.fork()
+        except Exception as e:
+            print("Error fork: {}".format(e))
+            return
+        if pid == 0:
+            supervisord.claudio_abbado.start()
+            thread = threading.Thread(target=supervisord.run_supervisord, daemon=True)
+            thread.start()
+            supervisord.run_server()
+        else:
+            return
     else:
         return
 
