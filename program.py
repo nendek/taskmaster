@@ -162,5 +162,6 @@ class Program():
 
     def reload(self, config):
         self._load_config(config)
+        self.kill_all()
         del self.process
         self._launch_process()

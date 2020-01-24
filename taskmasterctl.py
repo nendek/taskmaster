@@ -105,8 +105,8 @@ class Taskmasterclt():
         self.stream_serv.close()
         sys.exit(0)
     
-    def print_help(cmd, args):
-        print("help fct")
+    def print_help(self, cmd, args):
+        print(cmds)
 
     def handle_cmd(self, cmd):
         args = cmd.split()
@@ -118,6 +118,7 @@ class Taskmasterclt():
             return 
         else:
             self.dic_command[args[0]](args.pop(0), args)
+
 
 print(f"{bcolors.GB}{bcolors.BOLD}Hello Bro !{bcolors.ENDC}")
 cmds = ["status", "start", "stop", "restart", "update", "reload", "pid", "quit", "shutdown", "help"]
