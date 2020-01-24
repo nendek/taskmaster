@@ -3,67 +3,52 @@ import os
 import signal
 
 class Program():
-    def __init__(self, config, name, logger):
+    def __init__(self, config, name, fdnull, logger):
         self.logger = logger
         self.name_prog = name
         self.process = []
-        self.data = {}
-        self.env = os.environ.copy()
-        self._load_config(config)
+        self.fdnull = fdnull
+        self.config = self._load_config(config)
         self._launch_process()
 
     def quit(self):
         for process in self.process:
             process.quit()
             del process
+        if self.config["stdout"] != False:
+            os.close(self.config["fdout"])
+        if self.config["stderr"] != False:
+            os.close(self.config["fderr"])
 
     def _launch_process(self):
         self.process = []
         for i in range(0, self.numprocs):
             if self.numprocs <= 1:
-                self.process.append(Process(self.name_prog, self.logger))
+                self.process.append(Process(self.name_prog, self.config, self.logger))
             else:
-                self.process.append(Process("{}:{}".format(self.name_prog, i), self.logger))
+                self.process.append(Process("{}:{}".format(self.name_prog, i), self.config, self.logger))
             if self.autostart == True:
-                self.process[i].start(self.data)
+                self.process[i].start()
 
     def _load_config(self, config):
-        self.cmd = config["cmd"]
-        self.numprocs = config["numprocs"]
-        self.umask = config["umask"]
-        self.working_dir = config["working_dir"]
-        self.autostart = config["autostart"]
-        self.autorestart = config["autorestart"]
-        self.startretries = config["startretries"]
-        self.starttime = config["starttime"]
-        self.stopsignal = config["stopsignal"]
-        self.stoptime = config["stoptime"]
-
-        if config["stdout"] != False:
-            self.stdout = config["stdout"]
-            try:
-                self.fdout = os.open(self.stdout, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
-            except Exception as e:
-                self.logger.warning("Error: {}".format(e))
-                self.fdout = -1
-        else:
-            self.stdout = False
-            self.fdout = -1
-
-        if config["stderr"] != False:
-            self.stderr = config["stderr"]
-            try:
-                self.fderr = os.open(self.stderr, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
-            except Exception as e:
-                self.logger.warning("Error: {}".format(e))
-                self.fderr = -1
-        else:
-            self.stderr = False
-            self.fderr = -1
-        self.exitcodes = config["exitcodes"]
-        self.var_env = config["env"].copy()
-        self.bin, self.args = self.parse_cmd()
-        self._update_data()
+        config["fdnull"] = self.fd_null
+        try:
+            if config["stdout"] == False:
+                config["fdout"] = config["fdnull"]
+            else:
+                config["fdout"] = os.open(config["stdout"], os.O_WRONLY | os.O_CREAT | os.O_APPEND)
+    
+            if config["stderr"] == False:
+                config["fderr"] = config["fdnull"]
+            else:
+                config["fderr"] = os.open(config["stderr"], os.O_WRONLY | os.O_CREAT | os.O_APPEND)
+        except Exception as e:
+            self.logger.error("error on handling std : {}".format(e))
+            raise Exception # TODO : fix l'exception a raise
+        for key, val in os.environ.items():
+            config["env"][key] = val
+        config["bin"], config["args"] = self.parse_cmd()
+        return config
         
 
     def __str__(self):
@@ -74,33 +59,17 @@ class Program():
 
     def parse_cmd(self):
         tab = self.cmd.split()
-        return tab.pop(0), tab
+        return tab[0], tab
     
-    def _set_env(self):
-        for key, value in self.var_env.items():
-            self.data["env"][key] = value
-        return
-
-    def _set_args(self):
-        self.data["args"].insert(0, self.bin)
-        return
-
-    def _update_data(self):
-        self.env = os.environ.copy()
-        self.data["cmd"] = self.bin
-        self.data["args"] = self.args
-        self._set_args()
-        self.data["env"] = self.env
-        self._set_env()
-        self.data["fdout"] = self.fdout
-        self.data["fderr"] = self.fderr
-        self.data["working_dir"] = self.working_dir
-        self.data["umask"] = self.umask
-        self.data["starttime"] = self.starttime
-        self.data["stoptime"] = self.stoptime
-        self.data["startretries"] = self.startretries
-        return
-    
+    """
+#    def refresh_conf(self, config):
+#        self._load_config(config)
+#
+#    def reload(self, config):
+#        self._load_config(config)
+#        self.kill_all()
+#        del self.process
+#        self._launch_process()
     def kill_all(self):
         response = ""
         for process in self.process:
@@ -157,11 +126,4 @@ class Program():
                 return 1
         return 0
 
-    def refresh_conf(self, config):
-        self._load_config(config)
-
-    def reload(self, config):
-        self._load_config(config)
-        self.kill_all()
-        del self.process
-        self._launch_process()
+"""

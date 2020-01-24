@@ -10,6 +10,7 @@ import socket
 import logging
 from logging.handlers import RotatingFileHandler
         
+# TODO : restart + fonction de wrapp autour de l'envoi et la reception des socket + reverifier ce qu'il reste apres les anciennes fonction d'actions
 class Supervisord:
     def __init__(self, conf_file):
         self.init_logger()
@@ -29,9 +30,9 @@ class Supervisord:
         signal.signal(signal.SIGHUP, self.reload_conf)
         self.dic_fcts = {
             "status": self.status,
-            "start": self.multiple_arg,
-            "stop": self.multiple_arg,
-            "restart": self.multiple_arg,
+            "start": self.action,
+            "stop": self.action,
+            "restart": self.restart,
             "update": self.update,
             "pid": self.pid,
             "shutdown": self.shutdown
@@ -60,7 +61,7 @@ class Supervisord:
             self.claudio_abbado.update_processes()
 
     def status(self):
-        response = self.claudio_abbado.show_processes()
+        response = self.claudio_abbado.status()
         return response
 
     def update(self):
@@ -73,19 +74,46 @@ class Supervisord:
     def shutdown(self):
         self.quit()
 
-    def multiple_arg(self, msg):
-        if msg[0] == "start":
-            fct = claudio_abbado.start_proc()
-        elif msg[0] == "stop":
-            fct = claudio_abbado.stop_proc()
-        elif msg[0] == "restart":
-            fct == claudio_abbado.restart_proc()
+    def restart(self, msg):
+        pass
 
-        if msg[1] == "all":
+    def action(self, msg):
+        status = ["ERROR (no such process)", "", "ERROR (already {})"]
+        if msg[0] == "start":
+            fct = claudio_abbado.start()
+            action = "started"
+        elif msg[0] == "stop":
+            fct = claudio_abbado.stop()
+            action = "stopped"
+
+        status[1] += action
+        status[2] = status[2].format(action)
+        response = ""
+        if "all" in msg:
             for program in self.claudio_abbado.programs:
                 for process in program.process:
-                    process.start(process.data)
+                    ret = fct(process.name_proc)
+                    if ret == 1:
+                        response += "{}: {}\n".format(process.name_proc, status[ret])
+            return response
 
+        else:
+            for i in range(1, len(msg)):
+                if ":*" in msg[i]:
+                    group = msg[i].split(":*")
+                    for program in self.claudio_abbado.programs:
+                        if program.name_prog == group[0]:
+                            for process in program.process:
+                                ret = fct(process.name_proc)
+                                if ret == 1:
+                                    response += "{}: {}\n".format(process.name_proc, status[ret])
+                    response += "{}: ERROR (no such group)".format(group[0])
+                else:
+                    ret = fct(msg[i])
+                    response += "{}: {}\n".format(msg[i], status[ret])
+            return response
+
+"""
     def _handle_cmd(self, msg, stream):
         response = ""
         msg = msg.decode()
@@ -146,11 +174,11 @@ class Supervisord:
         if response == "":
             response = "\n"
         return response
-
+"""
     def reload_conf(self, sig, stack):
         try:
             self.config_parser.parse_config()
-            self.claudio_abbado.reload_conf(self.config_parser.configs)
+            self.claudio_abbado.update(self.config_parser.configs)
         except ParsingError as e:
             self.logger.error(e.__str__())
             self.quit()
@@ -214,7 +242,7 @@ def main(conf_file):
             print("Error fork: {}".format(e))
             return
         if pid == 0:
-            supervisord.claudio_abbado.start()
+            supervisord.claudio_abbado.start_orchestrator()
             thread = threading.Thread(target=supervisord.run_supervisord, daemon=True)
             thread.start()
             supervisord.run_server()
