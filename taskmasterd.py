@@ -143,6 +143,8 @@ class Supervisord:
             response = "taskmasterd pid is {}".format(os.getpid())
         elif msg[0] == "shutdown":
             self.shutdown()
+        if response == "":
+            response = "\n"
         return response
 
     def reload_conf(self, sig, stack):

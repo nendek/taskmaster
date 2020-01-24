@@ -106,16 +106,22 @@ class Process:
 
     def _launch_process(self, data):
         try:
+            fd_null = os.open("/dev/null", os.O_WRONLY)
             if data["fdout"] > 0:
                 os.dup2(data["fdout"], sys.stdout.fileno())
+            else:
+                os.dup2(fd_null, sys.stdout.fileno())
             if data["fderr"] > 0:
                 os.dup2(data["fderr"], sys.stderr.fileno())
+            else:
+                os.dup2(fd_null, sys.stderr.fileno())
+            os.close(fd_null)
             if data["working_dir"] != '.':
                 os.chdir(data["working_dir"])
             os.umask(data["umask"])
             os.execve(data["cmd"], data["args"], data["env"])
         except Exception as e:
-            self.logger.error("cant execve: {}".format(e))
+            self.logger.error("Error on launchig process: {}".format(e))
         sys.exit()
     
     def kill(self):
@@ -133,7 +139,7 @@ class Process:
                 self.nb_start = 0
                 self.logger.info("process {} is now in STOPPING state".format(self.name_proc))
         except Exception as e:
-            self.logger.debug(pid)
+            self.logger.debug(self.pid)
             self.logger.error(e)
             return -1
         else:
