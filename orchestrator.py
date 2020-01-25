@@ -64,7 +64,7 @@ class Orchestrator():
         # 1 : delete les programmes qui ont disparus
         lst_to_del = []
         for prog in self.programs:
-            if prog.name_prog not in new_configs["programs"].keys()
+            if prog.name_prog not in new_configs["programs"].keys():
                 prog.quit()
                 lst.to_del.append(prog)
         for elem in lst_to_del:
@@ -103,7 +103,7 @@ class Orchestrator():
 
     def start(self, name_proc):
         for program in self.programs:
-            for proc in progam.process:
+            for proc in program.process:
                 if proc.name_proc == name_proc:
                     if proc.status not in ["RUNNING", "STARTING"]:
                         proc.start()
@@ -114,10 +114,10 @@ class Orchestrator():
     
     def stop(self, name_proc):
         for program in self.programs:
-            for proc in progam.process:
+            for proc in program.process:
                 if proc.name_proc == name_proc:
                     if proc.status in ["RUNNING", "STARTING"]:
-                        proc.stop()
+                        proc.stop(program.config["stopsignal"])
                         return 1
                     else:
                         return 2
@@ -125,7 +125,7 @@ class Orchestrator():
 
     def kill(self, name_proc):
         for program in self.programs:
-            for proc in progam.process:
+            for proc in program.process:
                 if proc.name_proc == name_proc:
                     if proc.status in ["RUNNING", "STARTING", "STOPPING"]:
                         proc.quit()

@@ -1,3 +1,4 @@
+#!/bin/python3
 import sys
 import os
 import argparse
@@ -10,7 +11,7 @@ import socket
 import logging
 from logging.handlers import RotatingFileHandler
         
-# TODO : restart + fonction de wrapp autour de l'envoi et la reception des socket + reverifier ce qu'il reste apres les anciennes fonction d'actions
+# TODO : restart
 class Supervisord:
     def __init__(self, conf_file):
         self.init_logger()
@@ -49,7 +50,7 @@ class Supervisord:
 
     def quit(self, sig="shutdown", frame=None):
         self.logger.warning("taskmasterd received signal {}".format(sig))
-        self.claudio_abbado.quit()
+        self.claudio_abbado.quit_orchestrator()
         if self.stream_client != None:
             self.stream_client.close()
         self.socket.close()
@@ -59,6 +60,17 @@ class Supervisord:
     def run_supervisord(self):
         while (1):
             self.claudio_abbado.update_processes()
+
+    def get_response(self, cmd):
+        cmd = cmd.split()
+        if len(cmd) == 0:
+            self.stream_client = self._wait_connexion()
+            return ""
+        elif len(cmd) == 1:
+            response = self.dic_fcts[cmd[0]]()
+        else:
+            response = self.dic_fcts[cmd[0]](cmd)
+        return response
 
     def status(self):
         response = self.claudio_abbado.status()
@@ -80,10 +92,10 @@ class Supervisord:
     def action(self, msg):
         status = ["ERROR (no such process)", "", "ERROR (already {})"]
         if msg[0] == "start":
-            fct = claudio_abbado.start()
+            fct = self.claudio_abbado.start
             action = "started"
         elif msg[0] == "stop":
-            fct = claudio_abbado.stop()
+            fct = self.claudio_abbado.stop
             action = "stopped"
 
         status[1] += action
@@ -113,68 +125,6 @@ class Supervisord:
                     response += "{}: {}\n".format(msg[i], status[ret])
             return response
 
-"""
-    def _handle_cmd(self, msg, stream):
-        response = ""
-        msg = msg.decode()
-        msg = msg.split()
-        if len(msg) == 0:
-            return "empty msg"
-        if msg[0] == "status":
-            response = self.claudio_abbado.show_processes()
-        elif msg[0] == "start":
-            if msg[1] == "all":
-                response = self.claudio_abbado.start_all_proc()
-            elif ":*" in msg[1]:
-                group = msg[1].split(':')
-                for prog in self.claudio_abbado.programs:
-                    if prog.name_prog == group[0]:
-                        response = prog.start_all()
-                        break
-                if response == "":
-                    response = "{:30} group not exist".format(group[0])
-            else:
-                for i in range(1, len(msg)):
-                    response += self.claudio_abbado.start_proc(msg[i])
-        elif msg[0] == "stop":
-            if msg[1] == "all":
-                response = self.claudio_abbado.stop_all_proc()
-            elif ":*" in msg[1]:
-                group = msg[1].split(':')
-                for prog in self.claudio_abbado.programs:
-                    if prog.name_prog == group[0]:
-                        response = prog.stop_all()
-                        break
-                if response == "":
-                    response = "{:30} group not exist".format(group[0])
-            else:
-                for i in range(1, len(msg)):
-                    response += self.claudio_abbado.stop_proc(msg[i])
-        elif msg[0] == "restart":
-            if msg[1] == "all":
-                response = self.claudio_abbado.restart_all_proc()
-            elif ":*" in msg[1]:
-                group = msg[1].split(':')
-                for prog in self.claudio_abbado.programs:
-                    if prog.name_prog == group[0]:
-                        response = prog.restart_all()
-                        break
-                if response == "":
-                    response = "{:30}\tgroup not exist".format(group[0])
-            else:
-                for i in range(1, len(msg)):
-                    response += self.claudio_abbado.restart_proc(msg[i])
-        elif msg[0] == "update":
-            self.reload_conf(0, 0)
-            response = "configuration reloaded"
-        elif msg[0] == "pid":
-            response = "taskmasterd pid is {}".format(os.getpid())
-        elif msg[0] == "shutdown":
-            self.shutdown()
-        if response == "":
-            response = "\n"
-        return response
-"""
     def reload_conf(self, sig, stack):
         try:
             self.config_parser.parse_config()
@@ -189,35 +139,37 @@ class Supervisord:
         self.logger.info('client successfully connected to daemon')
         return self.stream_client
 
-    def run_server(self):
+    def start_server(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             self.socket.bind(('', 5678))
+            self.socket.listen(0)
         except Exception as e:
             self.logger.error("Error: {}".format(e))
             self.quit()
-        self.socket.listen(0)
+            
+    def read_from_client(self):
+        msg = self.stream_client.recv(1024).decode()
+        return msg
+
+    def send_to_client(self, msg):
+        self.stream_client.send(msg.encode())
+        
+    def run_server(self):
         self.stream_client = self._wait_connexion()
-        msg = b''
-        while msg != b'quit':
-            msg = self.stream_client.recv(1024)
-            if msg == b'':
-                self.stream_client.close()
-                self.logger.info("client disconnected")
-                self.stream_client = self._wait_connexion()
-                continue
-            response = self._handle_cmd(msg, self.stream_client)
+        while True:
             try:
-                self.stream_client.send(response.encode())
+                request = self.read_from_client()
+                response = self.get_response(request)
+                self.send_to_client(response)
             except Exception as e:
-                self.logger.error("Error: {}".format(e))
+                self.logger.error(e.__str__())
                 self.quit()
-        self.stream_client.close()
-        self.socket.close()
 
 def main(conf_file):
     supervisord = Supervisord(conf_file)
+    supervisord.start_server()
     try:
         pid = os.fork()
     except Exception as e:

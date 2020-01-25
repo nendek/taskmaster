@@ -22,16 +22,16 @@ class Program():
 
     def _launch_process(self):
         self.process = []
-        for i in range(0, self.numprocs):
-            if self.numprocs <= 1:
+        for i in range(0, self.config["numprocs"]):
+            if self.config["numprocs"] <= 1:
                 self.process.append(Process(self.name_prog, self.config, self.logger))
             else:
                 self.process.append(Process("{}:{}".format(self.name_prog, i), self.config, self.logger))
-            if self.autostart == True:
+            if self.config["autostart"] == True:
                 self.process[i].start()
 
     def _load_config(self, config):
-        config["fdnull"] = self.fd_null
+        config["fdnull"] = self.fdnull
         try:
             if config["stdout"] == False:
                 config["fdout"] = config["fdnull"]
@@ -47,7 +47,7 @@ class Program():
             raise Exception # TODO : fix l'exception a raise
         for key, val in os.environ.items():
             config["env"][key] = val
-        config["bin"], config["args"] = self.parse_cmd()
+        config["bin"], config["args"] = self.parse_cmd(config["cmd"])
         return config
         
 
@@ -57,8 +57,8 @@ class Program():
         "stoptime: {}\nstdout: {}\nstderr: {}\nexitcodes: {}\nenv: {}".format(self.name, self.process, self.cmd, self.numprocs, self.umask, self.working_dir, self.autostart, self.autorestart,
                 self.startretries, self.starttime, self.stopsignal, self.stoptime, self.stdout, self.stderr, self.exitcodes, self.env)
 
-    def parse_cmd(self):
-        tab = self.cmd.split()
+    def parse_cmd(self, cmd):
+        tab = cmd.split()
         return tab[0], tab
     
     """

@@ -33,7 +33,6 @@ class Process:
             if self.pid != 0:
                 self.nb_start = 0
                 os.kill(self.pid, signal)
-                self._set_status("STOPPING")
                 self.update_status()
         except Exception as e:
             self.logger.debug(self.pid)
@@ -91,6 +90,7 @@ class Process:
 
     def stop(self, stopsignal):
         self._send_signal(stopsignal)
+        self._set_status("STOPPING")
         self.stopped_time = time.time()
 
     def quit(self):
@@ -103,7 +103,7 @@ class Process:
                 pass
             if self.status == "STARTING":
                 if now > self.started_time + self.config["starttime"]:
-                    elf._set_status("RUNNING")
+                    self._set_status("RUNNING")
                     self.nb_start = 0
             if self.status == "STOPPING":
                 if now > self.stopped_time + self.config["stoptime"]:
