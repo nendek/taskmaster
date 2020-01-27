@@ -78,10 +78,10 @@ class Supervisord:
 
     def update(self):
         reponse = self.reload_conf(0, 0)
-        return "configuration reloaded"
+        return "configuration reloaded\n"
     
     def pid(self):
-        return "taskmasterd pid is {}".format(os.getpid())
+        return "taskmasterd pid is {}\n".format(os.getpid())
     
     def shutdown(self):
         self.quit()

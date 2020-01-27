@@ -64,29 +64,27 @@ class Orchestrator():
         for prog in self.programs:
             if prog.name_prog not in new_configs["programs"].keys():
                 prog.quit()
-                lst.to_del.append(prog)
+                lst_to_del.append(prog)
         for elem in lst_to_del:
             del self.programs[self.programs.index(elem)]
 
-        # 2 : relancer ceux qui restent abec une config diff
+        # 2 : delete ceux qui restent avec une config diff
         lst_to_del = []
         for prog in self.programs:
             if self.same_config(prog.config, new_configs["programs"][prog.name_prog]) == False:
                 prog.quit()
-                lst.to_del.append(prog)
+                lst_to_del.append(prog)
         for elem in lst_to_del:
             del self.programs[self.programs.index(elem)]
 
         # 3 : ajouter les nouveaux programmes
-        lst_to_create = []
         for prog_name in new_configs["programs"]:
             if prog_name not in [elem.name_prog for elem in self.programs]:
                 self.programs.append(Program(new_configs["programs"][prog_name], prog_name, self.fdnull, self.logger))
-
         self.configs = new_configs
 
     def same_config(self, dic_old, dic_new):
-        for key, val in dic_new:
+        for key, val in dic_new.items():
             if dic_old[key] != val:
                 return False
         return True
@@ -128,6 +126,8 @@ class Orchestrator():
                 if proc.name_proc == name_proc:
                     if proc.status in ["RUNNING", "STARTING", "STOPPING"]:
                         proc.quit()
+                        while (proc.status != "STOPPED"):
+                            pass
                         return 1
                     else:
                         return 2
