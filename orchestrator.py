@@ -1,4 +1,3 @@
-#import yaml
 import time
 import signal
 import os
@@ -48,7 +47,6 @@ class Orchestrator():
     def status(self):
         string = ""
         self.update_processes()
-        self.logger.info("status request received")
         for program in self.programs:
             for proc in program.process:
                 if proc.pid != 0:
@@ -73,7 +71,7 @@ class Orchestrator():
         # 2 : relancer ceux qui restent abec une config diff
         lst_to_del = []
         for prog in self.programs:
-            if same_config(prog.config, new_configs["programs"][prog.name_prog]) == False:
+            if self.same_config(prog.config, new_configs["programs"][prog.name_prog]) == False:
                 prog.quit()
                 lst.to_del.append(prog)
         for elem in lst_to_del:
@@ -93,7 +91,6 @@ class Orchestrator():
                 return False
         return True
         
-
     """
         return protocole for nexts functions :
             return 1 = started
@@ -118,6 +115,8 @@ class Orchestrator():
                 if proc.name_proc == name_proc:
                     if proc.status in ["RUNNING", "STARTING"]:
                         proc.stop(program.config["stopsignal"])
+                        while (proc.status != "STOPPED"):
+                            pass
                         return 1
                     else:
                         return 2
@@ -133,75 +132,3 @@ class Orchestrator():
                     else:
                         return 2
         return 0
-
-        
-
-"""
-    def start_all_proc(self):
-        self.logger.info("start all request received")
-        response = ""
-        for program in self.programs:
-            response += program.start_all()
-        return response
-
-    def start_proc(self, name):
-        self.logger.info("start {} request received".format(name))
-        response = ""
-        for program in self.programs:
-            if program.start(name):
-                response = "{:30} started\n".format(name)
-                return response
-        response = "{:30} not exist\n".format(name)
-        return response
-    
-    def kill_all_proc(self):
-        self.logger.info("kill all request received")
-        response = ""
-        for program in self.programs:
-            response += program.kill_all()
-        return response
-
-    def kill_proc(self, name):
-        self.logger.info("kill {} request received".format(name))
-        response = ""
-        for program in self.programs:
-            if program.kill(name):
-                response = "{:30} killed\n".format(name)
-                return response
-        response = "{:30} not exist\n".format(name)
-        return response
-    
-    def stop_all_proc(self):
-        self.logger.info("stop all request received")
-        response = ""
-        for program in self.programs:
-            response += program.stop_all()
-        return response
-
-    def stop_proc(self, name):
-        self.logger.info("stop {} request received".format(name))
-        response = ""
-        for program in self.programs:
-            if program.stop(name):
-                response = "{:30} stopped\n".format(name)
-                return response
-        response = "{:30} not exist\n".format(name)
-        return response
-    
-    def restart_all_proc(self):
-        self.logger.info("restart all request received")
-        response = ""
-        for program in self.programs:
-            response += program.restart_all()
-        return response
-
-    def restart_proc(self, name):
-        self.logger.info("restart {} request received".format(name))
-        response = ""
-        for program in self.programs:
-            if program.restart(name):
-                response = "{:30} restarted\n".format(name)
-                return response
-        response = "{:30} not exist\n".format(name)
-        return response
-"""

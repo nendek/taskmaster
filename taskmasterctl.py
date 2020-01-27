@@ -43,7 +43,7 @@ class Taskmasterclt():
     def create_connection(self):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(5)
+            sock.settimeout(30)
             sock.connect((self.host, self.port))
         except Exception as e:
             print(f"{bcolors.ERR}", end='')

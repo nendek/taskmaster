@@ -33,7 +33,7 @@ class Process:
             if self.pid != 0:
                 self.nb_start = 0
                 os.kill(self.pid, signal)
-                self.update_status()
+                #self.update_status()
         except Exception as e:
             self.logger.debug(self.pid)
             self.logger.error(e)
@@ -81,7 +81,6 @@ class Process:
                 self._launch_process()
             else:
                 self.pid = pid
-                self.logger.info("process {} started".format(self.name_proc))
                 self._create_listener()
                 self._set_status("STARTING")
                 self.update_status()
@@ -95,6 +94,8 @@ class Process:
 
     def quit(self):
         self._send_signal(signal.SIGKILL)
+        self._set_status("STOPPED")
+
     
     def update_status(self):
         now = time.time()

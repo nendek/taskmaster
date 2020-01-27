@@ -33,7 +33,7 @@ class Supervisord:
             "status": self.status,
             "start": self.action,
             "stop": self.action,
-            "restart": self.restart,
+            "restart": self.action,
             "update": self.update,
             "pid": self.pid,
             "shutdown": self.shutdown
@@ -91,7 +91,13 @@ class Supervisord:
 
     def action(self, msg):
         status = ["ERROR (no such process)", "", "ERROR (already {})"]
-        if msg[0] == "start":
+        if msg[0] == "restart":
+            msg[0] = "stop"
+            response = self.action(msg)
+            msg[0] = "start"
+            response += self.action(msg)
+            return response
+        elif msg[0] == "start":
             fct = self.claudio_abbado.start
             action = "started"
         elif msg[0] == "stop":
@@ -105,10 +111,8 @@ class Supervisord:
             for program in self.claudio_abbado.programs:
                 for process in program.process:
                     ret = fct(process.name_proc)
-                    if ret == 1:
-                        response += "{}: {}\n".format(process.name_proc, status[ret])
+                    response += "{}: {}\n".format(process.name_proc, status[ret])
             return response
-
         else:
             for i in range(1, len(msg)):
                 if ":*" in msg[i]:
@@ -117,9 +121,9 @@ class Supervisord:
                         if program.name_prog == group[0]:
                             for process in program.process:
                                 ret = fct(process.name_proc)
-                                if ret == 1:
-                                    response += "{}: {}\n".format(process.name_proc, status[ret])
-                    response += "{}: ERROR (no such group)".format(group[0])
+                                response += "{}: {}\n".format(process.name_proc, status[ret])
+                            return response
+                    response += "{}: ERROR (no such group)\n".format(group[0])
                 else:
                     ret = fct(msg[i])
                     response += "{}: {}\n".format(msg[i], status[ret])
@@ -151,6 +155,7 @@ class Supervisord:
             
     def read_from_client(self):
         msg = self.stream_client.recv(1024).decode()
+        self.logger.info("received request: {}".format(msg))
         return msg
 
     def send_to_client(self, msg):
