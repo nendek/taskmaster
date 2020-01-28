@@ -64,19 +64,25 @@ class Taskmasterclt():
             print("Error: {}".format(e))
             print(f"{bcolors.ENDC}", end='')
             self.quit(None, None)
-        cmd = b''
+        msg = b''
         if cmd != "shutdown":
             try:
-                msg = self.stream_serv.recv(1024)
+                end_msg = False
+                msg = b''
+                while end_msg == False:
+                    msg += self.stream_serv.recv(1024)
+                    if b"##arpn" in msg:
+                        end_msg = True
             except Exception as e:
                 print(f"{bcolors.ERR}", end='')
                 print("Error: {}".format(e))
                 print(f"{bcolors.ENDC}", end='')
                 self.quit(None, None)
-        if msg == b'':
+        if msg == b"##arpn" or msg == b'':
             print(f"{bcolors.ERR}Taskmasterd not running{bcolors.ENDC}")
             self.quit(None, None)
         print(f"{bcolors.ENDC}", end='')
+        msg = msg.replace(b'##arpn', b'')
         print(msg.decode())
     
     def one_arg(self, cmd, args):

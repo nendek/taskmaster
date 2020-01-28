@@ -11,7 +11,6 @@ import socket
 import logging
 from logging.handlers import RotatingFileHandler
         
-# TODO : restart
 class Supervisord:
     def __init__(self, conf_file):
         self.init_logger()
@@ -103,7 +102,6 @@ class Supervisord:
         elif msg[0] == "stop":
             fct = self.claudio_abbado.stop
             action = "stopped"
-
         status[1] += action
         status[2] = status[2].format(action)
         response = ""
@@ -159,6 +157,7 @@ class Supervisord:
         return msg
 
     def send_to_client(self, msg):
+        msg += "##arpn"
         self.stream_client.send(msg.encode())
         
     def run_server(self):
