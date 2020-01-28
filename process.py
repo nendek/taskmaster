@@ -89,8 +89,8 @@ class Process:
 
     def stop(self, stopsignal):
         self._send_signal(stopsignal)
-        self._set_status("STOPPING")
         self.stopped_time = time.time()
+        self._set_status("STOPPING")
 
     def quit(self):
         self._send_signal(signal.SIGKILL)

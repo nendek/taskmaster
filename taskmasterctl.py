@@ -61,8 +61,9 @@ class Taskmasterclt():
 
     def receive_from_server(self):
         msg = self.stream_serv.recv(1024)
-        while b'##arpn' not in msg:
-            msg += self.stream_serv.recv(1024)
+        if msg != b'':
+            while b'##arpn' not in msg:
+                msg += self.stream_serv.recv(1024)
         msg = msg.replace(b'##arpn', b'')
         return msg
 
@@ -117,6 +118,7 @@ class Taskmasterclt():
         print(cmds)
 
     def handle_cmd(self, cmd):
+        cmd = cmd.replace("##arpn", "")
         args = cmd.split()
         if len(args) == 0:
             return 
