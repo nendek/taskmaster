@@ -40,6 +40,8 @@ class Config_parser():
     def _parse_yaml(self, data):
         for program in data.values():
             for name, params in program.items():
+                if "##arpn" in name:
+                    raise ParsingError("Error : FORBIDDEN to have '##arpn' in name")
                 self.configs["programs"][name] = self.default_config.copy()
                 for key, val in params.items():
                     self._check_type(key, val, name)

@@ -1,4 +1,3 @@
-#import yaml
 import time
 import signal
 import os
@@ -10,20 +9,21 @@ class Orchestrator():
         self.logger = logger
         self.programs = []
         self.configs = configs
-#        signal.signal(signal.SIGHUP, self.reload_conf)
+        self.fdnull = os.open("/dev/null", os.O_WRONLY)
 
-    def start(self):
+    def start_orchestrator(self):
         progs = []
         for elem in self.configs["programs"]:
-            progs.append(Program(self.configs["programs"][elem], elem, self.logger))
+            progs.append(Program(self.configs["programs"][elem], elem, self.fdnull, self.logger))
         self.programs = progs
         self.logger.info("taskmasterd well started")
         return
     
-    def quit(self):
+    def quit_orchestrator(self):
         for prog in self.programs:
             prog.quit()
             del prog
+        os.close(self.fdnull)
         self.logger.info("supervisord shutdown")
 
     def update_processes(self):
@@ -35,150 +35,100 @@ class Orchestrator():
             for process in program.process:
                 process.update_status()
                 if process.status == "BACKOFF":
-                    process.start(program.data)
-                if program.autorestart == True:
+                    process.start()
+                if program.config["autorestart"] == True:
                     if process.status == "EXITED":
-                        process.start(program.data)
-                if program.autorestart == "unexpected":
+                        process.start()
+                if program.config["autorestart"] == "unexpected":
                     if process.status == "EXITED":
-                        if process.return_code not in program.exitcodes:
-                            process.start(program.data)
+                        if process.return_code not in program.config["exitcodes"]:
+                            process.start()
 
-    def show_processes(self):
+    def status(self):
         string = ""
         self.update_processes()
-        self.logger.info("status request received")
         for program in self.programs:
             for proc in program.process:
                 if proc.pid != 0:
-                    string += "{:30} {:10} pid {:10} uptime      {}\n".format(proc.name_proc, proc.status, proc.pid, time.strftime("%H:%M:%S", time.gmtime(time.time() - proc.start_time)))
+                    string += "{:30} {:10} pid {:10} uptime      {}\n".format(proc.name_proc, proc.status, proc.pid, time.strftime("%H:%M:%S", time.gmtime(time.time() - proc.started_time)))
                 else:
-                    if proc.end_time == 0:
+                    if proc.ended_time == 0:
                         string += "{:30} {:10}\n".format(proc.name_proc, proc.status)
                     else:
-                        string += "{:30} {:25} {}\n".format(proc.name_proc, proc.status, time.strftime("%b %d %Y %H:%M:%S", time.gmtime(proc.end_time)))
+                        string += "{:30} {:25} {}\n".format(proc.name_proc, proc.status, time.strftime("%b %d %Y %H:%M:%S", time.gmtime(proc.ended_time)))
         return string
 
-    def _refresh_conf_prog(self, name, configs):
+    def update(self, new_configs):
+        # 1 : delete les programmes qui ont disparus
+        lst_to_del = []
         for prog in self.programs:
-            if prog.name_prog == name:
-                prog.refresh_conf(configs)
-                return
-        return
-        
-    def _reload_prog(self, name, configs):
-        for prog in self.programs:
-            if prog.name_prog == name:
-                prog.reload(configs)
-                return
-        return
-
-    def reload_conf(self, new_configs):
-        self.logger.info("loading config file")
-        for name_prog in new_configs["programs"]:
-            if name_prog not in self.configs["programs"]:
-                self.programs.append(Program(new_configs["programs"][name_prog], name_prog, self.logger))
-        prog_to_del = []
-        for prog in self.configs["programs"]:
-            if prog not in new_configs["programs"]:
-                for program in self.programs:
-                    if program.name_prog == prog:
-                        program.quit()
-                        prog_to_del.append(program)
-            elif self.configs["programs"][prog]["numprocs"] !=  new_configs["programs"][prog]["numprocs"]:
-                self._reload_prog(prog, new_configs["programs"][prog])
-            elif self.configs["programs"][prog]["umask"] !=  new_configs["programs"][prog]["umask"]:
-                self._reload_prog(prog, new_configs["programs"][prog])
-            elif self.configs["programs"][prog]["working_dir"] !=  new_configs["programs"][prog]["working_dir"]:
-                self._reload_prog(prog, new_configs["programs"][prog])
-            elif self.configs["programs"][prog]["stdout"] !=  new_configs["programs"][prog]["stdout"]:
-                self._reload_prog(prog, new_configs["programs"][prog])
-            elif self.configs["programs"][prog]["stderr"] !=  new_configs["programs"][prog]["stderr"]:
-                self._reload_prog(prog, new_configs["programs"][prog])
-            elif self.configs["programs"][prog]["env"] !=  new_configs["programs"][prog]["env"]:
-                self._reload_prog(prog, new_configs["programs"][prog])
-            elif self.configs["programs"][prog]["autostart"] !=  new_configs["programs"][prog]["autostart"]:
-                self._reload_prog(prog, new_configs["programs"][prog])
-            elif self.configs["programs"][prog]["autorestart"] !=  new_configs["programs"][prog]["autorestart"]:
-                self._reload_prog(prog, new_configs["programs"][prog])
-            elif self.configs["programs"][prog]["startretries"] !=  new_configs["programs"][prog]["startretries"]:
-                self._reload_prog(prog, new_configs["programs"][prog])
-            elif self.configs["programs"][prog]["exitcodes"] !=  new_configs["programs"][prog]["exitcodes"]:
-                self._reload_prog(prog, new_configs["programs"][prog])
-            elif self.configs["programs"][prog]["starttime"] !=  new_configs["programs"][prog]["starttime"]:
-                self._reload_prog(prog, new_configs["programs"][prog])
-            else:
-                self._refresh_conf_prog(prog, new_configs["programs"][prog])
-        for elem in prog_to_del:
+            if prog.name_prog not in new_configs["programs"].keys():
+                prog.quit()
+                lst_to_del.append(prog)
+        for elem in lst_to_del:
             del self.programs[self.programs.index(elem)]
+
+        # 2 : delete ceux qui restent avec une config diff
+        lst_to_del = []
+        for prog in self.programs:
+            if self.same_config(prog.config, new_configs["programs"][prog.name_prog]) == False:
+                prog.quit()
+                lst_to_del.append(prog)
+        for elem in lst_to_del:
+            del self.programs[self.programs.index(elem)]
+
+        # 3 : ajouter les nouveaux programmes
+        for prog_name in new_configs["programs"]:
+            if prog_name not in [elem.name_prog for elem in self.programs]:
+                self.programs.append(Program(new_configs["programs"][prog_name], prog_name, self.fdnull, self.logger))
         self.configs = new_configs
-        self.logger.info("config file well loaded")
-        return
 
-    def start_all_proc(self):
-        self.logger.info("start all request received")
-        response = ""
-        for program in self.programs:
-            response += program.start_all()
-        return response
+    def same_config(self, dic_old, dic_new):
+        for key, val in dic_new.items():
+            if dic_old[key] != val:
+                return False
+        return True
+        
+    """
+        return protocole for nexts functions :
+            return 1 = started
+            return 2 = already started
+            return 0 = not found 
+    """
 
-    def start_proc(self, name):
-        self.logger.info("start {} request received".format(name))
-        response = ""
+    def start(self, name_proc):
         for program in self.programs:
-            if program.start(name):
-                response = "{:30} started\n".format(name)
-                return response
-        response = "{:30} not exist\n".format(name)
-        return response
+            for proc in program.process:
+                if proc.name_proc == name_proc:
+                    if proc.status not in ["RUNNING", "STARTING"]:
+                        proc.start()
+                        return 1
+                    else:
+                        return 2
+        return 0
     
-    def kill_all_proc(self):
-        self.logger.info("kill all request received")
-        response = ""
+    def stop(self, name_proc):
         for program in self.programs:
-            response += program.kill_all()
-        return response
+            for proc in program.process:
+                if proc.name_proc == name_proc:
+                    if proc.status in ["RUNNING", "STARTING"]:
+                        proc.stop(program.config["stopsignal"])
+                        while (proc.status != "STOPPED"):
+                            pass
+                        return 1
+                    else:
+                        return 2
+        return 0
 
-    def kill_proc(self, name):
-        self.logger.info("kill {} request received".format(name))
-        response = ""
+    def kill(self, name_proc):
         for program in self.programs:
-            if program.kill(name):
-                response = "{:30} killed\n".format(name)
-                return response
-        response = "{:30} not exist\n".format(name)
-        return response
-    
-    def stop_all_proc(self):
-        self.logger.info("stop all request received")
-        response = ""
-        for program in self.programs:
-            response += program.stop_all()
-        return response
-
-    def stop_proc(self, name):
-        self.logger.info("stop {} request received".format(name))
-        response = ""
-        for program in self.programs:
-            if program.stop(name):
-                response = "{:30} stopped\n".format(name)
-                return response
-        response = "{:30} not exist\n".format(name)
-        return response
-    
-    def restart_all_proc(self):
-        self.logger.info("restart all request received")
-        response = ""
-        for program in self.programs:
-            response += program.restart_all()
-        return response
-
-    def restart_proc(self, name):
-        self.logger.info("restart {} request received".format(name))
-        response = ""
-        for program in self.programs:
-            if program.restart(name):
-                response = "{:30} restarted\n".format(name)
-                return response
-        response = "{:30} not exist\n".format(name)
-        return response
+            for proc in program.process:
+                if proc.name_proc == name_proc:
+                    if proc.status in ["RUNNING", "STARTING", "STOPPING"]:
+                        proc.quit()
+                        while (proc.status != "STOPPED"):
+                            pass
+                        return 1
+                    else:
+                        return 2
+        return 0

@@ -45,6 +45,7 @@ class Taskmasterclt():
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(5)
             sock.connect((self.host, self.port))
+            sock.settimeout(None)
         except Exception as e:
             print(f"{bcolors.ERR}", end='')
             print("Error: {}".format(e))
@@ -54,26 +55,38 @@ class Taskmasterclt():
         self.stream_serv = sock
         return
 
+    def send_to_server(self, msg):
+        msg += b'##arpn'
+        self.stream_serv.send(msg)
+
+    def receive_from_server(self):
+        msg = self.stream_serv.recv(1024)
+        if msg != b'':
+            while b'##arpn' not in msg:
+                msg += self.stream_serv.recv(1024)
+        msg = msg.replace(b'##arpn', b'')
+        return msg
+
     def send_and_recv_cmd(self, cmd, arg):
         msg = "{} {}".format(cmd, arg)
         msg = msg.encode()
         try:
-            self.stream_serv.send(msg)
+            self.send_to_server(msg)
         except Exception as e:
             print(f"{bcolors.ERR}", end='')
             print("Error: {}".format(e))
             print(f"{bcolors.ENDC}", end='')
             self.quit(None, None)
-        cmd = b''
+        msg = b''
         if cmd != "shutdown":
             try:
-                msg = self.stream_serv.recv(1024)
+                msg = self.receive_from_server()
             except Exception as e:
                 print(f"{bcolors.ERR}", end='')
                 print("Error: {}".format(e))
                 print(f"{bcolors.ENDC}", end='')
                 self.quit(None, None)
-        if msg == b'':
+        if msg == b"##arpn" or msg == b'':
             print(f"{bcolors.ERR}Taskmasterd not running{bcolors.ENDC}")
             self.quit(None, None)
         print(f"{bcolors.ENDC}", end='')
@@ -105,6 +118,7 @@ class Taskmasterclt():
         print(cmds)
 
     def handle_cmd(self, cmd):
+        cmd = cmd.replace("##arpn", "")
         args = cmd.split()
         if len(args) == 0:
             return 

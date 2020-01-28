@@ -6,58 +6,38 @@ import sys
 import signal
 
 class Process:
-    def __init__(self, name, logger):
+    def __init__(self, name, config, logger):
         self.logger = logger
         self.name_proc = name
+        self.config = config
         self.pid = 0
         self.status = "STOPPED"
         self.nb_start = 0
-        self.max_start = 0
 
-        self.start_time = 0
-        self.starting_time = 0 # time to wait before STARTING to RUNNING state
+        self.started_time = 0 # time when process has been stated
+        self.stopped_time = 0 # time when process received signal stop
+        self.ended_time = 0 # time when process has terminate
 
-        self.stop_time = 0
-        self.stopping_time = 0 # time to wait before STOPPING to STOPPED state
-
-        self.end_time = 0
-        self.return_code = None
+        self.return_code = None # return code of the process when exited
     
     def __str__(self):
         return "Process\n\tpid: {}\n\tstatus: {}\n\t"\
         "\t\treturn_code: {}".format(self.pid, self.status, self.return_code)
 
-    def start(self, data):
-        if self.pid == 0:
-            self.nb_start += 1
-            self.max_start = data["startretries"]
-            if (self.nb_start > self.max_start):
-                self.status = "FATAL"
-                return 
-            self.start_time = time.time()
-            self.end_time = 0
-            self.starting_time = data["starttime"]
-            self.stopping_time = data["stoptime"]
-            try:
-                pid = os.fork()
-            except Exception as e:
-                self.logger.warning("Error fork: {}".format(e))
-                return
-            if pid == 0: # child
-                self._launch_process(data)
-            else:
-                self.pid = pid
-                self.logger.info("process {} started".format(self.name_proc))
-                self._create_listener()
-                self.logger.info("process {} is now in STARTING state".format(self.name_proc))
-                self.status = "STARTING"
-                self.update_status()
-                return
-        return
+    def _set_status(self, status):
+        self.status = status
+        self.logger.info("process {} is now in {} state".format(self.name_proc, status))
 
-    def quit(self):
-        self.kill()
-    
+    def _send_signal(self, signal): # put nb_start to 0
+        try:
+            if self.pid != 0:
+                self.nb_start = 0
+                os.kill(self.pid, signal)
+                #self.update_status()
+        except Exception as e:
+            self.logger.debug(self.pid)
+            self.logger.error(e)
+
     def _create_listener(self):
         thread = threading.Thread(target=self._check_process_state, daemon=True)
         thread.start()
@@ -66,85 +46,76 @@ class Process:
     def _check_process_state(self):
         try:
             status = os.waitpid(self.pid, 0)
-            self.end_time = time.time()
+            self.ended_time = time.time()
             self.return_code = os.WEXITSTATUS(status[1])
             self.pid = 0
         except Exception as e:
             self.logger.error(e)
-        finally:
-            return
         return
 
+    def _launch_process(self):
+        try:
+            os.dup2(self.config["fdout"], sys.stdout.fileno())
+            os.dup2(self.config["fderr"], sys.stderr.fileno())
+            os.chdir(self.config["working_dir"])
+            os.umask(self.config["umask"])
+            os.execve(self.config["bin"], self.config["args"], self.config["env"])
+        except Exception as e:
+            self.logger.error("Error on launchig process {}: {}".format(self.name_proc, e))
+        sys.exit()
+    
+    def start(self):
+        if self.pid == 0:
+            self.nb_start += 1
+            if (self.nb_start > self.config["startretries"]):
+                self._set_status("FATAL")
+                return 
+            self.started_time = time.time()
+            self.ended_time = 0
+            try:
+                pid = os.fork()
+            except Exception as e:
+                self.logger.warning("Error fork: {}".format(e))
+                return
+            if pid == 0: # child
+                self._launch_process()
+            else:
+                self.pid = pid
+                self._create_listener()
+                self._set_status("STARTING")
+                self.update_status()
+                return
+        return
+
+    def stop(self, stopsignal):
+        self._send_signal(stopsignal)
+        self.stopped_time = time.time()
+        self._set_status("STOPPING")
+
+    def quit(self):
+        self._send_signal(signal.SIGKILL)
+        self._set_status("STOPPED")
+
+    
     def update_status(self):
         now = time.time()
         if self.pid != 0: # process en cours
             if self.status == "RUNNING":
                 pass
             if self.status == "STARTING":
-                if now > self.start_time + self.starting_time:
-                    self.status = "RUNNING"
-                    self.logger.info("process {} is now in RUNNING state".format(self.name_proc))
+                if now > self.started_time + self.config["starttime"]:
+                    self._set_status("RUNNING")
                     self.nb_start = 0
             if self.status == "STOPPING":
-                if now > self.stop_time + self.stopping_time:
-                    self.kill()
+                if now > self.stopped_time + self.config["stoptime"]:
+                    self.quit()
         else: # process fini
             if self.status == "STARTING":
-                if self.end_time < self.start_time + self.starting_time:
-                    self.status = "BACKOFF"
-                    self.logger.info("process {} is now in BACKOFF state".format(self.name_proc))
+                if self.ended_time < self.started_time + self.config["starttime"]:
+                    self._set_status("BACKOFF")
                 else:
-                    self.status = "EXITED"
-                    self.logger.info("process {} is now in EXITED state".format(self.name_proc))
+                    self._set_status("EXITED")
             if self.status == "RUNNING":
-                self.status = "EXITED"
-                self.logger.info("process {} is now in EXITED state".format(self.name_proc))
+                self._set_status("EXITED")
             if self.status == "STOPPING":
-                self.status = "STOPPED"
-                self.logger.info("process {} is now in STOPPED state".format(self.name_proc))
-
-
-    def _launch_process(self, data):
-        try:
-            fd_null = os.open("/dev/null", os.O_WRONLY)
-            if data["fdout"] > 0:
-                os.dup2(data["fdout"], sys.stdout.fileno())
-            else:
-                os.dup2(fd_null, sys.stdout.fileno())
-            if data["fderr"] > 0:
-                os.dup2(data["fderr"], sys.stderr.fileno())
-            else:
-                os.dup2(fd_null, sys.stderr.fileno())
-            os.close(fd_null)
-            if data["working_dir"] != '.':
-                os.chdir(data["working_dir"])
-            os.umask(data["umask"])
-            os.execve(data["cmd"], data["args"], data["env"])
-        except Exception as e:
-            self.logger.error("Error on launchig process: {}".format(e))
-        sys.exit()
-    
-    def kill(self):
-        self._send_signal(signal.SIGKILL)
-
-    def stop(self, stopsignal):
-        self._send_signal(stopsignal)
-        self.stop_time = time.time()
-
-    def _send_signal(self, signal): # put nb_start to 0
-        try:
-            if self.pid != 0:
-                self.nb_start = 0
-                os.kill(self.pid, signal)
-                self.status = "STOPPING"
-                self.logger.info("process {} is now in STOPPING state".format(self.name_proc))
-        except Exception as e:
-            self.logger.debug(self.pid)
-            self.logger.error(e)
-            return -1
-        else:
-            return 0
-
-    def restart(self, data):
-        self.kill()
-        self.start(data)
+                self._set_status("STOPPED")
