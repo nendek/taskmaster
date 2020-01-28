@@ -43,8 +43,9 @@ class Taskmasterclt():
     def create_connection(self):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(30)
+            sock.settimeout(5)
             sock.connect((self.host, self.port))
+            sock.settimeout(None)
         except Exception as e:
             print(f"{bcolors.ERR}", end='')
             print("Error: {}".format(e))
@@ -54,11 +55,22 @@ class Taskmasterclt():
         self.stream_serv = sock
         return
 
+    def send_to_server(self, msg):
+        msg += b'##arpn'
+        self.stream_serv.send(msg)
+
+    def receive_from_server(self):
+        msg = self.stream_serv.recv(1024)
+        while b'##arpn' not in msg:
+            msg += self.stream_serv.recv(1024)
+        msg = msg.replace(b'##arpn', b'')
+        return msg
+
     def send_and_recv_cmd(self, cmd, arg):
         msg = "{} {}".format(cmd, arg)
         msg = msg.encode()
         try:
-            self.stream_serv.send(msg)
+            self.send_to_server(msg)
         except Exception as e:
             print(f"{bcolors.ERR}", end='')
             print("Error: {}".format(e))
@@ -67,12 +79,7 @@ class Taskmasterclt():
         msg = b''
         if cmd != "shutdown":
             try:
-                end_msg = False
-                msg = b''
-                while end_msg == False:
-                    msg += self.stream_serv.recv(1024)
-                    if b"##arpn" in msg:
-                        end_msg = True
+                msg = self.receive_from_server()
             except Exception as e:
                 print(f"{bcolors.ERR}", end='')
                 print("Error: {}".format(e))
@@ -82,7 +89,6 @@ class Taskmasterclt():
             print(f"{bcolors.ERR}Taskmasterd not running{bcolors.ENDC}")
             self.quit(None, None)
         print(f"{bcolors.ENDC}", end='')
-        msg = msg.replace(b'##arpn', b'')
         print(msg.decode())
     
     def one_arg(self, cmd, args):

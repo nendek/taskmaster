@@ -152,12 +152,18 @@ class Supervisord:
             self.quit()
             
     def read_from_client(self):
-        msg = self.stream_client.recv(1024).decode()
+        msg = self.stream_client.recv(1024)
+        if msg != b'':
+            while b'##arpn' not in msg:
+                msg += self.stream_client.recv(1024)
+        msg = msg.replace(b'##arpn', b'')
+        msg = msg.decode()
         self.logger.info("received request: {}".format(msg))
         return msg
 
     def send_to_client(self, msg):
-        msg += "##arpn"
+        if msg != "":
+            msg += "##arpn"
         self.stream_client.send(msg.encode())
         
     def run_server(self):
